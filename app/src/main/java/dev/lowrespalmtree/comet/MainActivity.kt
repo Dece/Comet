@@ -66,18 +66,33 @@ class MainActivity : AppCompatActivity() {
             viewModelScope.launch(Dispatchers.IO) {
                 val uri = Uri.parse(url)
                 if (uri.scheme != "gemini") {
-                    alertLiveData.postValue("Unknown scheme.")
+                    alertLiveData.postValue("Can't process scheme \"${uri.scheme}\".")
                     return@launch
                 }
+
                 val request = Request(uri)
                 val socket = request.connect()
                 val channel = request.proceed(socket, this)
-                val charset = Charset.defaultCharset()
-                for (data in channel) {
-                    val decoded = charset.decode(ByteBuffer.wrap(data)).toString()
-                    source += decoded
-                    sourceLiveData.postValue(source)
+                val response = Response.from(channel, viewModelScope)
+                if (response == null) {
+                    alertLiveData.postValue("Can't parse server response.")
+                    return@launch
                 }
+
+                Log.i(TAG, "sendRequest: got ${response.code} with meta \"${response.meta}\"")
+                when (response.code) {
+                    Response.Code.SUCCESS -> handleRequestSuccess(response)
+                    else -> alertLiveData.postValue("Can't handle code ${response.code}.")
+                }
+            }
+        }
+
+        private suspend fun handleRequestSuccess(response: Response) {
+            val charset = Charset.defaultCharset()
+            for (data in response.data) {
+                val decoded = charset.decode(ByteBuffer.wrap(data)).toString()
+                source += decoded
+                sourceLiveData.postValue(source)
             }
         }
     }

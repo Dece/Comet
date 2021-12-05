@@ -37,6 +37,7 @@ class Request(private val uri: Uri) {
             socket.inputStream.use { socket_input_stream ->
                 BufferedInputStream(socket_input_stream).use { bis ->
                     try {
+                        @Suppress("BlockingMethodInNonBlockingContext")  // what u gonna do
                         while ((bis.read(buffer).also { numRead = it }) >= 0) {
                             Log.d(TAG, "proceed coroutine: received $numRead bytes")
                             val received = buffer.sliceArray(0 until numRead)
