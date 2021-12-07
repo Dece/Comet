@@ -89,9 +89,17 @@ class MainActivity : AppCompatActivity() {
 
         private suspend fun handleRequestSuccess(response: Response) {
             val charset = Charset.defaultCharset()
-            for (data in response.data) {
-                val decoded = charset.decode(ByteBuffer.wrap(data)).toString()
-                source += decoded
+            for (line in parseData(response.data, charset, viewModelScope)) {
+                when (line) {
+                    is EmptyLine -> { source += "\n" }
+                    is ParagraphLine -> { source += line.text + "\n" }
+                    is TitleLine -> { source += "TTL-${line.level} ${line.text}\n" }
+                    is LinkLine -> { source += "LNK ${line.url} + ${line.label}\n" }
+                    is PreFenceLine -> { source += "PRE ${line.caption}\n" }
+                    is PreTextLine -> { source += line.text + "\n" }
+                    is BlockquoteLine -> { source += "QUO ${line.text}\n" }
+                    is ListItemLine -> { source += "LST ${line.text}\n" }
+                }
                 sourceLiveData.postValue(source)
             }
         }
