@@ -61,6 +61,12 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
 
     private fun openUrl(url: String, base: String? = null) {
         var uri = Uri.parse(url)
+        if (!uri.isAbsolute) {
+            uri = if (!base.isNullOrEmpty()) joinUrls(base, url) else toGeminiUri(uri)
+            Log.d(TAG, "openUrl: '$url' - '$base' - '$uri'")
+            Log.d(TAG, "openUrl: ${uri.authority} - ${uri.path} - ${uri.query}")
+            binding.addressBar.setText(uri.toString())
+        }
 
         when (uri.scheme) {
             "gemini" -> pageViewModel.sendGeminiRequest(uri)
