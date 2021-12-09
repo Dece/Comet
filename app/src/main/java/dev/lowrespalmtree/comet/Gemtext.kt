@@ -7,16 +7,16 @@ import java.nio.ByteBuffer
 import java.nio.CharBuffer
 import java.nio.charset.Charset
 
-open class Line
+interface Line
 
-class EmptyLine : Line()
-class ParagraphLine(val text: String) : Line()
-class TitleLine(val level: Int, val text: String) : Line()
-class LinkLine(val url: String, val label: String) : Line()
-class PreFenceLine(val caption: String) : Line()
-class PreTextLine(val text: String) : Line()
-class BlockquoteLine(val text: String) : Line()
-class ListItemLine(val text: String) : Line()
+class EmptyLine : Line
+class ParagraphLine(val text: String) : Line
+class TitleLine(val level: Int, val text: String) : Line
+class LinkLine(val url: String, val label: String) : Line
+class PreFenceLine(val caption: String) : Line
+class PreTextLine(val text: String) : Line
+class BlockquoteLine(val text: String) : Line
+class ListItemLine(val text: String) : Line
 
 fun parseData(
     inChannel: Channel<ByteArray>,
@@ -60,5 +60,3 @@ private fun parseLine(line: CharBuffer, isPreformatted: Boolean): Line =
     }
 
 private fun getCharsFrom(line: CharBuffer, index: Int) = line.substring(index).removePrefix(" ")
-
-private const val TAG = "Gemtext"

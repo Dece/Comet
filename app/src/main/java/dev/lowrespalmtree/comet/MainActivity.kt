@@ -2,6 +2,8 @@ package dev.lowrespalmtree.comet
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
+import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -13,15 +15,17 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.nio.ByteBuffer
+import java.net.UnknownHostException
 import java.nio.charset.Charset
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
     private lateinit var binding: ActivityMainBinding
     private lateinit var pageViewModel: PageViewModel
+    private lateinit var adapter: ContentAdapter
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,10 +34,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         pageViewModel = ViewModelProvider(this)[PageViewModel::class.java]
+        adapter = ContentAdapter(listOf(), this)
+        binding.contentRecycler.layoutManager = LinearLayoutManager(this)
+        binding.contentRecycler.adapter = adapter
 
         binding.addressBar.setOnEditorActionListener { view, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                pageViewModel.sendRequest(view.text.toString())
+                openUrl(view.text.toString())
                 val imm = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
                 imm.hideSoftInputFromWindow(view.windowToken, 0)
                 view.clearFocus()
@@ -43,37 +50,58 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        pageViewModel.sourceLiveData.observe(this, {
-            binding.sourceBlock.text = it
-        })
-        pageViewModel.alertLiveData.observe(this, {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.alert_title)
-                .setMessage(it)
-                .create()
-                .show()
-        })
+        pageViewModel.linesLiveData.observe(this, { adapter.setContent(it) })
+        pageViewModel.alertLiveData.observe(this, { alert(it) })
+    }
+
+    override fun onLinkClick(url: String) {
+        val base = binding.addressBar.text.toString()
+        openUrl(url, base = if (base.isNotEmpty()) base else null)
+    }
+
+    private fun openUrl(url: String, base: String? = null) {
+        var uri = Uri.parse(url)
+
+        when (uri.scheme) {
+            "gemini" -> pageViewModel.sendGeminiRequest(uri)
+            else -> startActivity(Intent(ACTION_VIEW, uri))
+        }
+    }
+
+    private fun alert(message: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.alert_title)
+            .setMessage(message)
+            .create()
+            .show()
     }
 
     class PageViewModel : ViewModel() {
-        var source = ""
-        val sourceLiveData: MutableLiveData<String> by lazy { MutableLiveData<String>() }
+        private var lines = ArrayList<Line>()
+        val linesLiveData: MutableLiveData<List<Line>> by lazy { MutableLiveData<List<Line>>() }
         val alertLiveData: MutableLiveData<String> by lazy { MutableLiveData<String>() }
 
-        fun sendRequest(url: String) {
-            Log.d(TAG, "sendRequest: $url")
-            source = ""
+        /**
+         * Perform a request against this URI.
+         *
+         * The URI must be valid, absolute and with a gemini scheme.
+         */
+        fun sendGeminiRequest(uri: Uri) {
+            Log.d(TAG, "sendRequest: $uri")
             viewModelScope.launch(Dispatchers.IO) {
-                val uri = Uri.parse(url)
-                if (uri.scheme != "gemini") {
-                    alertLiveData.postValue("Can't process scheme \"${uri.scheme}\".")
+                val response = try {
+                    val request = Request(uri)
+                    val socket = request.connect()
+                    val channel = request.proceed(socket, this)
+                    Response.from(channel, viewModelScope)
+                } catch (e: UnknownHostException) {
+                    alertLiveData.postValue("Unknown host \"${uri.authority}\".")
+                    return@launch
+                } catch (e: Exception) {
+                    Log.e(TAG, "sendGeminiRequest coroutine: ${e.stackTraceToString()}")
+                    alertLiveData.postValue("Oops! Whatever we tried to do failed!")
                     return@launch
                 }
-
-                val request = Request(uri)
-                val socket = request.connect()
-                val channel = request.proceed(socket, this)
-                val response = Response.from(channel, viewModelScope)
                 if (response == null) {
                     alertLiveData.postValue("Can't parse server response.")
                     return@launch
@@ -85,22 +113,15 @@ class MainActivity : AppCompatActivity() {
                     else -> alertLiveData.postValue("Can't handle code ${response.code}.")
                 }
             }
+
         }
 
         private suspend fun handleRequestSuccess(response: Response) {
+            lines.clear()
             val charset = Charset.defaultCharset()
             for (line in parseData(response.data, charset, viewModelScope)) {
-                when (line) {
-                    is EmptyLine -> { source += "\n" }
-                    is ParagraphLine -> { source += line.text + "\n" }
-                    is TitleLine -> { source += "TTL-${line.level} ${line.text}\n" }
-                    is LinkLine -> { source += "LNK ${line.url} + ${line.label}\n" }
-                    is PreFenceLine -> { source += "PRE ${line.caption}\n" }
-                    is PreTextLine -> { source += line.text + "\n" }
-                    is BlockquoteLine -> { source += "QUO ${line.text}\n" }
-                    is ListItemLine -> { source += "LST ${line.text}\n" }
-                }
-                sourceLiveData.postValue(source)
+                lines.add(line)
+                linesLiveData.postValue(lines)
             }
         }
     }
