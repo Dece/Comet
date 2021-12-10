@@ -41,6 +41,7 @@ fun parseData(
                 channel.send(line)
             }
         }
+        channel.close()
     }
     return channel
 }

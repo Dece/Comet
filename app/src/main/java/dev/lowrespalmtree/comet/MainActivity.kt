@@ -2,6 +2,7 @@ package dev.lowrespalmtree.comet
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
@@ -18,6 +19,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.net.UnknownHostException
 import java.nio.charset.Charset
@@ -26,6 +28,8 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
     private lateinit var binding: ActivityMainBinding
     private lateinit var pageViewModel: PageViewModel
     private lateinit var adapter: ContentAdapter
+
+    private val currentUrl get() = binding.addressBar.text
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,8 +54,11 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
             }
         }
 
-        pageViewModel.linesLiveData.observe(this, { adapter.setContent(it) })
-        pageViewModel.alertLiveData.observe(this, { alert(it) })
+        binding.contentSwipeLayout.setOnRefreshListener { openUrl(currentUrl.toString()) }
+
+        pageViewModel.state.observe(this, { updateState(it) })
+        pageViewModel.lines.observe(this, { updateLines(it) })
+        pageViewModel.alert.observe(this, { alert(it) })
     }
 
     override fun onLinkClick(url: String) {
@@ -63,29 +70,68 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         var uri = Uri.parse(url)
         if (!uri.isAbsolute) {
             uri = if (!base.isNullOrEmpty()) joinUrls(base, url) else toGeminiUri(uri)
-            Log.d(TAG, "openUrl: '$url' - '$base' - '$uri'")
-            Log.d(TAG, "openUrl: ${uri.authority} - ${uri.path} - ${uri.query}")
-            binding.addressBar.setText(uri.toString())
         }
 
         when (uri.scheme) {
-            "gemini" -> pageViewModel.sendGeminiRequest(uri)
-            else -> startActivity(Intent(ACTION_VIEW, uri))
+            "gemini" -> {
+                binding.addressBar.setText(uri.toString())
+                pageViewModel.sendGeminiRequest(uri)
+            }
+            else -> openUnknownScheme(uri)
         }
     }
 
-    private fun alert(message: String) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.alert_title)
+    private fun updateState(state: PageViewModel.State) {
+        Log.d(TAG, "updateState: $state")
+        when (state) {
+            PageViewModel.State.IDLE -> {
+                binding.contentProgressBar.hide()
+                binding.contentSwipeLayout.isRefreshing = false
+            }
+            PageViewModel.State.CONNECTING -> {
+                binding.contentProgressBar.show()
+            }
+            PageViewModel.State.RECEIVING -> {
+                binding.contentSwipeLayout.isRefreshing = false
+            }
+        }
+    }
+
+    private fun updateLines(lines: List<Line>) {
+        Log.d(TAG, "updateLines: ${lines.size} lines")
+        adapter.setContent(lines)
+    }
+
+    private fun alert(message: String, title: String? = null) {
+        val builder = AlertDialog.Builder(this)
+        if (title != null)
+            builder.setTitle(title)
+        else
+            builder.setTitle(title ?: R.string.alert_title)
+        builder
             .setMessage(message)
             .create()
             .show()
     }
 
+    private fun openUnknownScheme(uri: Uri) {
+        try {
+            startActivity(Intent(ACTION_VIEW, uri))
+        } catch (e: ActivityNotFoundException) {
+            alert("Can't open this URL.")
+        }
+    }
+
     class PageViewModel : ViewModel() {
-        private var lines = ArrayList<Line>()
-        val linesLiveData: MutableLiveData<List<Line>> by lazy { MutableLiveData<List<Line>>() }
-        val alertLiveData: MutableLiveData<String> by lazy { MutableLiveData<String>() }
+        private var requestJob: Job? = null
+        val state: MutableLiveData<State> by lazy { MutableLiveData<State>(State.IDLE) }
+        private var linesList = ArrayList<Line>()
+        val lines: MutableLiveData<List<Line>> by lazy { MutableLiveData<List<Line>>() }
+        val alert: MutableLiveData<String> by lazy { MutableLiveData<String>() }
+
+        enum class State {
+            IDLE, CONNECTING, RECEIVING
+        }
 
         /**
          * Perform a request against this URI.
@@ -93,42 +139,57 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
          * The URI must be valid, absolute and with a gemini scheme.
          */
         fun sendGeminiRequest(uri: Uri) {
-            Log.d(TAG, "sendRequest: $uri")
-            viewModelScope.launch(Dispatchers.IO) {
+            Log.d(TAG, "sendRequest: URI \"$uri\"")
+            state.postValue(State.CONNECTING)
+            requestJob?.apply { if (isActive) cancel() }
+            requestJob = viewModelScope.launch(Dispatchers.IO) {
                 val response = try {
                     val request = Request(uri)
                     val socket = request.connect()
                     val channel = request.proceed(socket, this)
                     Response.from(channel, viewModelScope)
                 } catch (e: UnknownHostException) {
-                    alertLiveData.postValue("Unknown host \"${uri.authority}\".")
+                    signalError("Unknown host \"${uri.authority}\".")
                     return@launch
                 } catch (e: Exception) {
                     Log.e(TAG, "sendGeminiRequest coroutine: ${e.stackTraceToString()}")
-                    alertLiveData.postValue("Oops! Whatever we tried to do failed!")
+                    signalError("Oops! Whatever we tried to do failed!")
                     return@launch
                 }
                 if (response == null) {
-                    alertLiveData.postValue("Can't parse server response.")
+                    signalError("Can't parse server response.")
                     return@launch
                 }
 
                 Log.i(TAG, "sendRequest: got ${response.code} with meta \"${response.meta}\"")
                 when (response.code) {
                     Response.Code.SUCCESS -> handleRequestSuccess(response)
-                    else -> alertLiveData.postValue("Can't handle code ${response.code}.")
+                    else -> signalError("Can't handle code ${response.code}.")
                 }
             }
+        }
 
+        private fun signalError(message: String) {
+            alert.postValue(message)
+            state.postValue(State.IDLE)
         }
 
         private suspend fun handleRequestSuccess(response: Response) {
-            lines.clear()
+            state.postValue(State.RECEIVING)
+            linesList.clear()
+            lines.postValue(linesList)
             val charset = Charset.defaultCharset()
+            var lastUpdate = System.currentTimeMillis()
             for (line in parseData(response.data, charset, viewModelScope)) {
-                lines.add(line)
-                linesLiveData.postValue(lines)
+                linesList.add(line)
+                val time = System.currentTimeMillis()
+                if (time - lastUpdate >= 100) {  // Throttle to 100ms the recycler view updates…
+                    lines.postValue(linesList)
+                    lastUpdate = time
+                }
             }
+            lines.postValue(linesList)
+            state.postValue(State.IDLE)
         }
     }
 

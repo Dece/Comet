@@ -50,6 +50,7 @@ class Request(private val uri: Uri) {
                 }
             }
             Log.d(TAG, "proceed coroutine: reading completed")
+            channel.close()
         }
         return channel
     }

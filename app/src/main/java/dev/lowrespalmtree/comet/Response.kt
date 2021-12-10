@@ -70,6 +70,7 @@ class Response(val code: Code, val meta: String, val data: Channel<ByteArray>) {
                     }
                     // Forward all incoming data to the Response channel.
                     channel.consumeEach { responseChannel.send(it) }
+                    responseChannel.close()
                 }
                 // Return the response here; this stops consuming the channel from this for-loop so
                 // that the coroutine above can take care of it.

@@ -1,5 +1,6 @@
 package dev.lowrespalmtree.comet
 
+import android.annotation.SuppressLint
 import android.text.SpannableString
 import android.text.style.UnderlineSpan
 import android.util.Log
@@ -11,6 +12,8 @@ import dev.lowrespalmtree.comet.databinding.*
 
 class ContentAdapter(private var content: List<Line>, private val listener: ContentAdapterListen) :
     RecyclerView.Adapter<ContentAdapter.ContentViewHolder>() {
+
+    private var lastLineCount = 0
 
     interface ContentAdapterListen {
         fun onLinkClick(url: String)
@@ -35,7 +38,6 @@ class ContentAdapter(private var content: List<Line>, private val listener: Cont
         }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ContentViewHolder {
-        Log.d(TAG, "onCreateViewHolder: type $viewType")
         return LayoutInflater.from(parent.context).let {
             when (viewType) {
                 TYPE_EMPTY -> ContentViewHolder.Empty(GemtextEmptyBinding.inflate(it))
@@ -54,7 +56,6 @@ class ContentAdapter(private var content: List<Line>, private val listener: Cont
     }
 
     override fun onBindViewHolder(holder: ContentViewHolder, position: Int) {
-        Log.d(TAG, "onBindViewHolder: position $position")
         val line = content[position]
         when (holder) {
             is ContentViewHolder.Paragraph -> holder.binding.textView.text =
@@ -75,9 +76,28 @@ class ContentAdapter(private var content: List<Line>, private val listener: Cont
 
     override fun getItemCount(): Int = content.size
 
-    fun setContent(content: List<Line>) {
-        this.content = content
-        notifyDataSetChanged()
+    /**
+     * Replace the content rendered by the recycler.
+     *
+     * The new content list may or may not be the same object as the previous one, we don't
+     * assume anything. The assumptions this function do however are:
+     * - If the new content is empty, we are about to load new content, so clear the recycler.
+     * - If it's longer than before, we received new streamed content, so *append* data.
+     * - If it's shorter or the same size than before, we do not notify anything and let the caller
+     *   manage the changes itself.
+     */
+    @SuppressLint("NotifyDataSetChanged")
+    fun setContent(newContent: List<Line>) {
+        content = newContent.toList()  // Shallow copy to avoid concurrent update issues.
+        if (content.isEmpty()) {
+            Log.d(TAG, "setContent: empty content")
+            notifyDataSetChanged()
+        } else if (content.size > lastLineCount) {
+            val numAdded = content.size - lastLineCount
+            Log.d(TAG, "setContent: added $numAdded items")
+            notifyItemRangeInserted(lastLineCount, numAdded)
+        }
+        lastLineCount = content.size
     }
 
     sealed class ContentViewHolder(view: View) : RecyclerView.ViewHolder(view) {
