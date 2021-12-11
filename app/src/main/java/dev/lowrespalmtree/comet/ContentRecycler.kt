@@ -55,11 +55,12 @@ class ContentAdapter(private var content: List<Line>, private val listener: Cont
         }
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: ContentViewHolder, position: Int) {
         val line = content[position]
         when (holder) {
-            is ContentViewHolder.Paragraph -> holder.binding.textView.text =
-                (line as ParagraphLine).text
+            is ContentViewHolder.Paragraph ->
+                holder.binding.textView.text = (line as ParagraphLine).text
             is ContentViewHolder.Title1 -> holder.binding.textView.text = (line as TitleLine).text
             is ContentViewHolder.Title2 -> holder.binding.textView.text = (line as TitleLine).text
             is ContentViewHolder.Title3 -> holder.binding.textView.text = (line as TitleLine).text
@@ -70,6 +71,12 @@ class ContentAdapter(private var content: List<Line>, private val listener: Cont
                 holder.binding.textView.text = underlined
                 holder.binding.root.setOnClickListener { listener.onLinkClick(line.url) }
             }
+            is ContentViewHolder.PreText ->
+                holder.binding.textView.text = (line as PreTextLine).text
+            is ContentViewHolder.Blockquote ->
+                holder.binding.textView.text = (line as BlockquoteLine).text
+            is ContentViewHolder.ListItem ->
+                holder.binding.textView.text = "\u25CF ${(line as ListItemLine).text}"
             else -> {}
         }
     }
