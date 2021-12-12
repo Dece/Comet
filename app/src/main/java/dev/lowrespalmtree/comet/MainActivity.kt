@@ -1,6 +1,5 @@
 package dev.lowrespalmtree.comet
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -18,9 +17,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.ActivityMainBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import java.net.ConnectException
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 
@@ -29,11 +27,22 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
     private lateinit var pageViewModel: PageViewModel
     private lateinit var adapter: ContentAdapter
 
-    private val currentUrl get() = binding.addressBar.text
+    /** Property to access and set the current address bar URL value. */
+    private var currentUrl
+        get() = binding.addressBar.text.toString()
+        set(value) = binding.addressBar.setText(value)
 
-    @SuppressLint("SetTextI18n")
+    /** A non-saved list of visited URLs. Not an history, just used for going back. */
+    private val visitedUrls = mutableListOf<String>()
+
+    /** Are we going back? */
+    private var goingBack = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        Database.init(applicationContext)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -54,16 +63,26 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
             }
         }
 
-        binding.contentSwipeLayout.setOnRefreshListener { openUrl(currentUrl.toString()) }
+        binding.contentSwipeLayout.setOnRefreshListener { openUrl(currentUrl) }
 
         pageViewModel.state.observe(this, { updateState(it) })
         pageViewModel.lines.observe(this, { updateLines(it) })
-        pageViewModel.alert.observe(this, { alert(it) })
+        pageViewModel.event.observe(this, { handleEvent(it) })
+    }
+
+    override fun onBackPressed() {
+        if (visitedUrls.isNotEmpty()) {
+            if (visitedUrls.size > 1)
+                visitedUrls.removeLast()
+            goingBack = true
+            openUrl(visitedUrls.removeLast())
+        } else {
+            super.onBackPressed()
+        }
     }
 
     override fun onLinkClick(url: String) {
-        val base = binding.addressBar.text.toString()
-        openUrl(url, base = if (base.isNotEmpty()) base else null)
+        openUrl(url, base = if (currentUrl.isNotEmpty()) currentUrl else null)
     }
 
     private fun openUrl(url: String, base: String? = null) {
@@ -74,7 +93,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
 
         when (uri.scheme) {
             "gemini" -> {
-                binding.addressBar.setText(uri.toString())
+                currentUrl = uri.toString()
                 pageViewModel.sendGeminiRequest(uri)
             }
             else -> openUnknownScheme(uri)
@@ -102,6 +121,24 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         adapter.setContent(lines)
     }
 
+    private fun handleEvent(event: PageViewModel.Event) {
+        Log.d(TAG, "handleEvent: $event")
+        if (!event.handled) {
+            when (event) {
+                is PageViewModel.SuccessEvent -> {
+                    if (goingBack)
+                        goingBack = false
+                    else
+                        visitedUrls.add(event.uri)
+                }
+                is PageViewModel.FailureEvent -> {
+                    alert(event.message)
+                }
+            }
+            event.handled = true
+        }
+    }
+
     private fun alert(message: String, title: String? = null) {
         val builder = AlertDialog.Builder(this)
         if (title != null)
@@ -127,11 +164,15 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         val state: MutableLiveData<State> by lazy { MutableLiveData<State>(State.IDLE) }
         private var linesList = ArrayList<Line>()
         val lines: MutableLiveData<List<Line>> by lazy { MutableLiveData<List<Line>>() }
-        val alert: MutableLiveData<String> by lazy { MutableLiveData<String>() }
+        val event: MutableLiveData<Event> by lazy { MutableLiveData<Event>() }
 
         enum class State {
             IDLE, CONNECTING, RECEIVING
         }
+
+        abstract class Event(var handled: Boolean = false)
+        data class SuccessEvent(val uri: String) : Event()
+        data class FailureEvent(val message: String) : Event()
 
         /**
          * Perform a request against this URI.
@@ -148,14 +189,22 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                     val socket = request.connect()
                     val channel = request.proceed(socket, this)
                     Response.from(channel, viewModelScope)
-                } catch (e: UnknownHostException) {
-                    signalError("Unknown host \"${uri.authority}\".")
-                    return@launch
                 } catch (e: Exception) {
                     Log.e(TAG, "sendGeminiRequest coroutine: ${e.stackTraceToString()}")
-                    signalError("Oops! Whatever we tried to do failed!")
+                    // If we got cancelled, die silently.
+                    if (!isActive)
+                        return@launch
+                    signalError(
+                        when (e) {
+                            is UnknownHostException -> "Unknown host \"${uri.authority}\"."
+                            is ConnectException -> "Can't connect to this server: ${e.message}."
+                            else -> "Oops, something failed!"
+                        }
+                    )
                     return@launch
                 }
+                if (!isActive)
+                    return@launch
                 if (response == null) {
                     signalError("Can't parse server response.")
                     return@launch
@@ -163,25 +212,29 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
 
                 Log.i(TAG, "sendRequest: got ${response.code} with meta \"${response.meta}\"")
                 when (response.code) {
-                    Response.Code.SUCCESS -> handleRequestSuccess(response)
+                    Response.Code.SUCCESS -> handleRequestSuccess(response, uri)
                     else -> signalError("Can't handle code ${response.code}.")
                 }
             }
         }
 
         private fun signalError(message: String) {
-            alert.postValue(message)
+            event.postValue(FailureEvent(message))
             state.postValue(State.IDLE)
         }
 
-        private suspend fun handleRequestSuccess(response: Response) {
+        private suspend fun handleRequestSuccess(response: Response, uri: Uri) {
             state.postValue(State.RECEIVING)
+
             linesList.clear()
             lines.postValue(linesList)
             val charset = Charset.defaultCharset()
+            var mainTitle: String? = null
             var lastUpdate = System.currentTimeMillis()
             for (line in parseData(response.data, charset, viewModelScope)) {
                 linesList.add(line)
+                if (mainTitle == null && line is TitleLine && line.level == 1)
+                    mainTitle = line.text
                 val time = System.currentTimeMillis()
                 if (time - lastUpdate >= 100) {  // Throttle to 100ms the recycler view updates…
                     lines.postValue(linesList)
@@ -189,6 +242,9 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                 }
             }
             lines.postValue(linesList)
+
+            History.record(uri.toString(), mainTitle)
+            event.postValue(SuccessEvent(uri.toString()))
             state.postValue(State.IDLE)
         }
     }
