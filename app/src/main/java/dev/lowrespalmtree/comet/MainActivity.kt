@@ -205,6 +205,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                 when (response.code.getCategory()) {
                     Response.Code.Category.SUCCESS -> handleRequestSuccess(response, uri)
                     Response.Code.Category.REDIRECT -> handleRedirect(response, redirects = redirects + 1)
+                    Response.Code.Category.SERVER_ERROR -> handleError(response)
                     else -> signalError("Can't handle code ${response.code}.")
                 }
             }
@@ -244,6 +245,22 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
 
         private fun handleRedirect(response: Response, redirects: Int) {
             event.postValue(RedirectEvent(response.meta, redirects))
+        }
+
+        private fun handleError(response: Response) {
+            event.postValue(FailureEvent(when (response.code) {
+                Response.Code.TEMPORARY_FAILURE -> "40: the server encountered a temporary failure."
+                Response.Code.SERVER_UNAVAILABLE -> "41: the server is currently unavailable."
+                Response.Code.CGI_ERROR -> "42: a CGI script encountered an error."
+                Response.Code.PROXY_ERROR -> "43: the server failed to proxy the request."
+                Response.Code.SLOW_DOWN -> "44: slow down!"
+                Response.Code.PERMANENT_FAILURE -> "50: this request failed and similar requests will likely fail as well."
+                Response.Code.NOT_FOUND -> "51: this page can't be found."
+                Response.Code.GONE -> "52: this page is gone."
+                Response.Code.PROXY_REQUEST_REFUSED -> "53: the server refused to proxy the request."
+                Response.Code.BAD_REQUEST -> "59: bad request."
+                else -> "${response.code}: unknown error code."
+            }))
         }
     }
 
