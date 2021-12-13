@@ -1,5 +1,6 @@
 package dev.lowrespalmtree.comet
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -18,6 +19,8 @@ class PreTextLine(val text: String) : Line
 class BlockquoteLine(val text: String) : Line
 class ListItemLine(val text: String) : Line
 
+const val TAG = "Gemtext"
+
 fun parseData(
     inChannel: Channel<ByteArray>,
     charset: Charset,
@@ -27,6 +30,7 @@ fun parseData(
     scope.launch {
         var isPref = false
         var buffer = ByteArray(0)
+        Log.d(TAG, "parseData: start getting data from channel")
         for (data in inChannel) {
             buffer += data
             var nextLineFeed: Int = -1
@@ -41,6 +45,7 @@ fun parseData(
                 channel.send(line)
             }
         }
+        Log.d(TAG, "parseData: channel closed")
         channel.close()
     }
     return channel

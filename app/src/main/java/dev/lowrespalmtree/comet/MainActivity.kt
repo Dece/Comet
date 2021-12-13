@@ -18,10 +18,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.onSuccess
 import java.net.ConnectException
+import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 
+@ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
     private lateinit var binding: ActivityMainBinding
     private lateinit var pageViewModel: PageViewModel
@@ -92,10 +95,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         }
 
         when (uri.scheme) {
-            "gemini" -> {
-                currentUrl = uri.toString()
-                pageViewModel.sendGeminiRequest(uri)
-            }
+            "gemini" -> pageViewModel.sendGeminiRequest(uri)
             else -> openUnknownScheme(uri)
         }
     }
@@ -125,7 +125,10 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         Log.d(TAG, "handleEvent: $event")
         if (!event.handled) {
             when (event) {
-                is PageViewModel.SuccessEvent -> visitedUrls.add(event.uri)
+                is PageViewModel.SuccessEvent -> {
+                    currentUrl = event.uri
+                    visitedUrls.add(event.uri)
+                }
                 is PageViewModel.RedirectEvent -> openUrl(event.uri, redirections = event.redirects)
                 is PageViewModel.FailureEvent -> alert(event.message)
             }
@@ -188,7 +191,9 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                     signalError(
                         when (e) {
                             is UnknownHostException -> "Unknown host \"${uri.authority}\"."
-                            is ConnectException -> "Can't connect to this server: ${e.message}."
+                            is ConnectException -> "Can't connect to this server: ${e.localizedMessage}."
+                            is SocketTimeoutException -> "Connection timed out."
+                            is CancellationException -> "Connection cancelled: ${e.message}."
                             else -> "Oops, something failed!"
                         }
                     )
@@ -204,7 +209,10 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                 Log.i(TAG, "sendRequest: got ${response.code} with meta \"${response.meta}\"")
                 when (response.code.getCategory()) {
                     Response.Code.Category.SUCCESS -> handleRequestSuccess(response, uri)
-                    Response.Code.Category.REDIRECT -> handleRedirect(response, redirects = redirects + 1)
+                    Response.Code.Category.REDIRECT -> handleRedirect(
+                        response,
+                        redirects = redirects + 1
+                    )
                     Response.Code.Category.SERVER_ERROR -> handleError(response)
                     else -> signalError("Can't handle code ${response.code}.")
                 }
@@ -224,16 +232,34 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
             val charset = Charset.defaultCharset()
             var mainTitle: String? = null
             var lastUpdate = System.currentTimeMillis()
-            for (line in parseData(response.data, charset, viewModelScope)) {
-                linesList.add(line)
-                if (mainTitle == null && line is TitleLine && line.level == 1)
-                    mainTitle = line.text
-                val time = System.currentTimeMillis()
-                if (time - lastUpdate >= 100) {  // Throttle to 100ms the recycler view updates…
-                    lines.postValue(linesList)
-                    lastUpdate = time
+            var lastNumLines = 0
+            Log.d(TAG, "handleRequestSuccess: start parsing line data")
+            try {
+                val lineChannel = parseData(response.data, charset, viewModelScope)
+                while (!lineChannel.isClosedForReceive) {
+                    val lineChannelResult = withTimeout(100) { lineChannel.tryReceive() }
+                    lineChannelResult.onSuccess { line ->
+                        linesList.add(line)
+                        if (mainTitle == null && line is TitleLine && line.level == 1)
+                            mainTitle = line.text
+                    }
+
+                    // Throttle the recycler view updates to 100ms and new content only.
+                    if (linesList.size > lastNumLines) {
+                        val time = System.currentTimeMillis()
+                        if (time - lastUpdate >= 100) {
+                            lines.postValue(linesList)
+                            lastUpdate = time
+                            lastNumLines = linesList.size
+                        }
+                    }
                 }
+            } catch (e: CancellationException) {
+                Log.e(TAG, "handleRequestSuccess: coroutine cancelled: ${e.message}")
+                state.postValue(State.IDLE)
+                return
             }
+            Log.d(TAG, "handleRequestSuccess: done parsing line data")
             lines.postValue(linesList)
 
             // We record the history entry here: it's nice because we have the main title available
@@ -248,19 +274,23 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         }
 
         private fun handleError(response: Response) {
-            event.postValue(FailureEvent(when (response.code) {
-                Response.Code.TEMPORARY_FAILURE -> "40: the server encountered a temporary failure."
-                Response.Code.SERVER_UNAVAILABLE -> "41: the server is currently unavailable."
-                Response.Code.CGI_ERROR -> "42: a CGI script encountered an error."
-                Response.Code.PROXY_ERROR -> "43: the server failed to proxy the request."
-                Response.Code.SLOW_DOWN -> "44: slow down!"
-                Response.Code.PERMANENT_FAILURE -> "50: this request failed and similar requests will likely fail as well."
-                Response.Code.NOT_FOUND -> "51: this page can't be found."
-                Response.Code.GONE -> "52: this page is gone."
-                Response.Code.PROXY_REQUEST_REFUSED -> "53: the server refused to proxy the request."
-                Response.Code.BAD_REQUEST -> "59: bad request."
-                else -> "${response.code}: unknown error code."
-            }))
+            event.postValue(
+                FailureEvent(
+                    when (response.code) {
+                        Response.Code.TEMPORARY_FAILURE -> "40: the server encountered a temporary failure."
+                        Response.Code.SERVER_UNAVAILABLE -> "41: the server is currently unavailable."
+                        Response.Code.CGI_ERROR -> "42: a CGI script encountered an error."
+                        Response.Code.PROXY_ERROR -> "43: the server failed to proxy the request."
+                        Response.Code.SLOW_DOWN -> "44: slow down!"
+                        Response.Code.PERMANENT_FAILURE -> "50: this request failed and similar requests will likely fail as well."
+                        Response.Code.NOT_FOUND -> "51: this page can't be found."
+                        Response.Code.GONE -> "52: this page is gone."
+                        Response.Code.PROXY_REQUEST_REFUSED -> "53: the server refused to proxy the request."
+                        Response.Code.BAD_REQUEST -> "59: bad request."
+                        else -> "${response.code}: unknown error code."
+                    }
+                )
+            )
         }
     }
 

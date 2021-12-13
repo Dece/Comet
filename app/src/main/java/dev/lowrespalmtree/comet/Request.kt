@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import java.io.BufferedInputStream
+import java.net.InetSocketAddress
 import java.net.SocketTimeoutException
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
@@ -20,8 +21,9 @@ class Request(private val uri: Uri) {
         Log.d(TAG, "connect")
         val context = SSLContext.getInstance("TLSv1.2")
         context.init(null, arrayOf(TrustManager()), null)
-        val socket = context.socketFactory.createSocket(uri.host, port) as SSLSocket
+        val socket = context.socketFactory.createSocket() as SSLSocket
         socket.soTimeout = 10000
+        socket.connect(InetSocketAddress(uri.host, port), 10000)
         socket.startHandshake()
         return socket
     }
@@ -39,13 +41,11 @@ class Request(private val uri: Uri) {
                     try {
                         @Suppress("BlockingMethodInNonBlockingContext")  // what u gonna do
                         while ((bis.read(buffer).also { numRead = it }) >= 0) {
-                            Log.d(TAG, "proceed coroutine: received $numRead bytes")
                             val received = buffer.sliceArray(0 until numRead)
                             channel.send(received)
                         }
                     } catch (e: SocketTimeoutException) {
-                        Log.i(TAG, "Socket timeout.")
-                        channel.cancel()
+                        Log.i(TAG, "proceed coroutine: socket timeout.")
                     }
                 }
             }
@@ -56,9 +56,10 @@ class Request(private val uri: Uri) {
     }
 
     @SuppressLint("CustomX509TrustManager")
-    class TrustManager: X509TrustManager {
+    class TrustManager : X509TrustManager {
         @SuppressLint("TrustAllX509TrustManager")
-        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+        }
 
         override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
             Log.d(TAG, "cool cert, please continue")

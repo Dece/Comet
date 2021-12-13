@@ -3,7 +3,7 @@ package dev.lowrespalmtree.comet
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -56,39 +56,45 @@ class Response(val code: Code, val meta: String, val data: Channel<ByteArray>) {
         suspend fun from(channel: Channel<ByteArray>, scope: CoroutineScope): Response? {
             var received = 0
             val headerBuffer = ByteBuffer.allocate(1024)
-            for (data in channel) {
+            var lfIndex: Int
+            // While we don't have a response object (i.e. no header parsed), keep reading.
+            while (true) {
+                val data = try {
+                    channel.receive()
+                } catch (e: ClosedReceiveChannelException) {
+                    Log.d(TAG, "companion from: channel closed during initial receive")
+                    return null
+                }
                 // Push some data into our buffer.
                 headerBuffer.put(data)
                 received += data.size
                 // Check if there is enough data to parse a Gemini header from it (e.g. has \r\n).
-                val lfIndex = headerBuffer.array().indexOf(0x0D)  // \r
+                lfIndex = headerBuffer.array().indexOf(0x0D)  // \r
                 if (lfIndex == -1)
                     continue
                 if (headerBuffer.array()[lfIndex + 1] != (0x0A.toByte()))  // \n
                     continue
-                // We have our header! Parse it to create our Response object.
-                val bytes = headerBuffer.array()
-                val headerData = bytes.sliceArray(0 until lfIndex)
-                val (code, meta) = parseHeader(headerData)
-                    ?: return null.also { Log.e(TAG, "Failed to parse header") }
-                val responseChannel = Channel<ByteArray>()
-                val response = Response(code, meta, responseChannel)
-                scope.launch {
-                    // If we got too much data from the channel: push the trailing data first.
-                    val trailingIndex = lfIndex + 2
-                    if (trailingIndex < received) {
-                        val trailingData = bytes.sliceArray(trailingIndex until received)
-                        responseChannel.send(trailingData)
-                    }
-                    // Forward all incoming data to the Response channel.
-                    channel.consumeEach { responseChannel.send(it) }
-                    responseChannel.close()
-                }
-                // Return the response here; this stops consuming the channel from this for-loop so
-                // that the coroutine above can take care of it.
-                return response
+                break
             }
-            return null
+            // We have our header! Parse it to create our Response object.
+            val bytes = headerBuffer.array()
+            val headerData = bytes.sliceArray(0 until lfIndex)
+            val (code, meta) = parseHeader(headerData)
+                ?: return null.also { Log.e(TAG, "companion from: can't parse header") }
+            val response = Response(code, meta, Channel())
+            scope.launch {
+                // If we got too much data from the channel: push the trailing data first.
+                val trailingIndex = lfIndex + 2
+                if (trailingIndex < received) {
+                    val trailingData = bytes.sliceArray(trailingIndex until received)
+                    response.data.send(trailingData)
+                }
+                // Forward all incoming data to the Response channel.
+                for (data in channel)
+                    response.data.send(data)
+                response.data.close()
+            }
+            return response
         }
 
         /** Return the code and meta from this header if it could be parsed correctly. */
