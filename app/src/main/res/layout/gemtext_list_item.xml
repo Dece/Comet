@@ -8,4 +8,4 @@
     android:paddingStart="32dp"
     android:paddingEnd="16dp"
     android:paddingTop="2dp"
-    android:paddingBottom="2dp" />
+    android:paddingBottom="4dp" />
