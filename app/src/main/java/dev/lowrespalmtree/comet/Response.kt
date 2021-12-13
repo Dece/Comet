@@ -31,6 +31,18 @@ class Response(val code: Code, val meta: String, val data: Channel<ByteArray>) {
         CERTIFICATE_NOT_AUTHORISED(61),
         CERTIFICATE_NOT_VALID(62);
 
+        enum class Category(val value: Int) {
+            UNKNOWN(0),
+            INPUT(1),
+            SUCCESS(2),
+            REDIRECT(3),
+            SERVER_ERROR(4),
+            CLIENT_ERROR(5),
+            CERTIFICATE(6);
+        }
+
+        fun getCategory(): Category? = Category.values().associateBy(Category::value)[value / 10]
+
         companion object {
             private val MAP = values().associateBy(Code::value)
             fun fromInt(type: Int) = MAP[type]

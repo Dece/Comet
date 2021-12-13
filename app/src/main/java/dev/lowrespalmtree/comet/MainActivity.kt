@@ -80,7 +80,12 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         openUrl(url, base = if (currentUrl.isNotEmpty()) currentUrl else null)
     }
 
-    private fun openUrl(url: String, base: String? = null) {
+    private fun openUrl(url: String, base: String? = null, redirections: Int = 0) {
+        if (redirections >= 5) {
+            alert("Too many redirections.")
+            return
+        }
+
         var uri = Uri.parse(url)
         if (!uri.isAbsolute) {
             uri = if (!base.isNullOrEmpty()) joinUrls(base, url) else toGeminiUri(uri)
@@ -120,24 +125,17 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         Log.d(TAG, "handleEvent: $event")
         if (!event.handled) {
             when (event) {
-                is PageViewModel.SuccessEvent -> {
-                    visitedUrls.add(event.uri)
-                }
-                is PageViewModel.FailureEvent -> {
-                    alert(event.message)
-                }
+                is PageViewModel.SuccessEvent -> visitedUrls.add(event.uri)
+                is PageViewModel.RedirectEvent -> openUrl(event.uri, redirections = event.redirects)
+                is PageViewModel.FailureEvent -> alert(event.message)
             }
             event.handled = true
         }
     }
 
-    private fun alert(message: String, title: String? = null) {
-        val builder = AlertDialog.Builder(this)
-        if (title != null)
-            builder.setTitle(title)
-        else
-            builder.setTitle(title ?: R.string.alert_title)
-        builder
+    private fun alert(message: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.error_alert_title)
             .setMessage(message)
             .create()
             .show()
@@ -164,6 +162,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
 
         abstract class Event(var handled: Boolean = false)
         data class SuccessEvent(val uri: String) : Event()
+        data class RedirectEvent(val uri: String, val redirects: Int) : Event()
         data class FailureEvent(val message: String) : Event()
 
         /**
@@ -171,7 +170,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
          *
          * The URI must be valid, absolute and with a gemini scheme.
          */
-        fun sendGeminiRequest(uri: Uri) {
+        fun sendGeminiRequest(uri: Uri, redirects: Int = 0) {
             Log.d(TAG, "sendRequest: URI \"$uri\"")
             state.postValue(State.CONNECTING)
             requestJob?.apply { if (isActive) cancel() }
@@ -203,8 +202,9 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                 }
 
                 Log.i(TAG, "sendRequest: got ${response.code} with meta \"${response.meta}\"")
-                when (response.code) {
-                    Response.Code.SUCCESS -> handleRequestSuccess(response, uri)
+                when (response.code.getCategory()) {
+                    Response.Code.Category.SUCCESS -> handleRequestSuccess(response, uri)
+                    Response.Code.Category.REDIRECT -> handleRedirect(response, redirects = redirects + 1)
                     else -> signalError("Can't handle code ${response.code}.")
                 }
             }
@@ -240,6 +240,10 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
             History.record(uri.toString(), mainTitle)
             event.postValue(SuccessEvent(uri.toString()))
             state.postValue(State.IDLE)
+        }
+
+        private fun handleRedirect(response: Response, redirects: Int) {
+            event.postValue(RedirectEvent(response.meta, redirects))
         }
     }
 
