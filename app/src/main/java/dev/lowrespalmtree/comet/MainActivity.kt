@@ -35,9 +35,6 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
     /** A non-saved list of visited URLs. Not an history, just used for going back. */
     private val visitedUrls = mutableListOf<String>()
 
-    /** Are we going back? */
-    private var goingBack = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -71,14 +68,12 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
     }
 
     override fun onBackPressed() {
-        if (visitedUrls.isNotEmpty()) {
-            if (visitedUrls.size > 1)
-                visitedUrls.removeLast()
-            goingBack = true
-            openUrl(visitedUrls.removeLast())
-        } else {
+        visitedUrls.removeLastOrNull()  // Always remove current page first.
+        val previousUrl = visitedUrls.removeLastOrNull()
+        if (previousUrl != null)
+            openUrl(previousUrl)
+        else
             super.onBackPressed()
-        }
     }
 
     override fun onLinkClick(url: String) {
@@ -126,10 +121,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         if (!event.handled) {
             when (event) {
                 is PageViewModel.SuccessEvent -> {
-                    if (goingBack)
-                        goingBack = false
-                    else
-                        visitedUrls.add(event.uri)
+                    visitedUrls.add(event.uri)
                 }
                 is PageViewModel.FailureEvent -> {
                     alert(event.message)
@@ -243,6 +235,8 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
             }
             lines.postValue(linesList)
 
+            // We record the history entry here: it's nice because we have the main title available
+            // and we're already in a coroutine for database access.
             History.record(uri.toString(), mainTitle)
             event.postValue(SuccessEvent(uri.toString()))
             state.postValue(State.IDLE)
