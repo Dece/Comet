@@ -57,8 +57,8 @@ private fun parseLine(line: CharBuffer, isPreformatted: Boolean): Line =
         line.startsWith("* ") -> ListItemLine(getCharsFrom(line, 2))
         line.startsWith("=>") -> getCharsFrom(line, 2)
             .split(" ", limit = 2)
-            .run { LinkLine(get(0), if (size == 2) get(1) else "") }
+            .run { LinkLine(get(0), if (size == 2) get(1).trimStart() else "") }
         else -> if (isPreformatted) PreTextLine(line.toString()) else ParagraphLine(line.toString())
     }
 
-private fun getCharsFrom(line: CharBuffer, index: Int) = line.substring(index).trimStart()
+private fun getCharsFrom(line: CharBuffer, index: Int) = line.substring(index).trim()
