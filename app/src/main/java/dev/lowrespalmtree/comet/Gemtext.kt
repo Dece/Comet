@@ -55,9 +55,10 @@ private fun parseLine(line: CharBuffer, isPreformatted: Boolean): Line =
         line.startsWith(">") -> BlockquoteLine(getCharsFrom(line, 1))
         line.startsWith("```") -> PreFenceLine(getCharsFrom(line, 3))
         line.startsWith("* ") -> ListItemLine(getCharsFrom(line, 2))
-        line.startsWith("=>") -> getCharsFrom(line, 2).split(" ", limit = 2)
+        line.startsWith("=>") -> getCharsFrom(line, 2)
+            .split(" ", limit = 2)
             .run { LinkLine(get(0), if (size == 2) get(1) else "") }
         else -> if (isPreformatted) PreTextLine(line.toString()) else ParagraphLine(line.toString())
     }
 
-private fun getCharsFrom(line: CharBuffer, index: Int) = line.substring(index).removePrefix(" ")
+private fun getCharsFrom(line: CharBuffer, index: Int) = line.substring(index).trimStart()
