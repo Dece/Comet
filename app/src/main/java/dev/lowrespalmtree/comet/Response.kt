@@ -51,6 +51,8 @@ class Response(val code: Code, val meta: String, val data: Channel<ByteArray>) {
 
     companion object {
         private const val TAG = "Response"
+        private const val MAX_META_LEN = 1024
+        private const val MAX_HEADER_LEN = 2 + 1 + MAX_META_LEN + 2
 
         /** Return a response object from the incoming server data, served through the channel. */
         suspend fun from(channel: Channel<ByteArray>, scope: CoroutineScope): Response? {
@@ -62,7 +64,11 @@ class Response(val code: Code, val meta: String, val data: Channel<ByteArray>) {
                 val data = try {
                     channel.receive()
                 } catch (e: ClosedReceiveChannelException) {
-                    Log.d(TAG, "companion from: channel closed during initial receive")
+                    Log.i(TAG, "companion from: channel closed during initial receive")
+                    return null
+                }
+                if (received + data.size > MAX_HEADER_LEN) {
+                    Log.i(TAG, "companion from: received too much data for a valid header")
                     return null
                 }
                 // Push some data into our buffer.
@@ -80,7 +86,7 @@ class Response(val code: Code, val meta: String, val data: Channel<ByteArray>) {
             val bytes = headerBuffer.array()
             val headerData = bytes.sliceArray(0 until lfIndex)
             val (code, meta) = parseHeader(headerData)
-                ?: return null.also { Log.e(TAG, "companion from: can't parse header") }
+                ?: return null .also { Log.i(TAG, "companion from: can't parse header") }
             val response = Response(code, meta, Channel())
             scope.launch {
                 // If we got too much data from the channel: push the trailing data first.
