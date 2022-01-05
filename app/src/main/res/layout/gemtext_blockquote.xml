@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/text_view"
-    android:textSize="16sp"
-    android:textColor="@color/text"
-    android:textStyle="italic"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    style="@style/CometText"
+    android:textStyle="italic"
     android:paddingStart="32dp"
-    android:paddingEnd="16dp"
-    android:paddingTop="2dp"
-    android:paddingBottom="4dp" />
+    android:paddingEnd="16dp" />
