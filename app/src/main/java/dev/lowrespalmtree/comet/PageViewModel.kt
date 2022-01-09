@@ -25,6 +25,7 @@ class PageViewModel : ViewModel() {
     }
 
     abstract class Event(var handled: Boolean = false)
+    data class InputEvent(val uri: Uri, val prompt: String) : Event()
     data class SuccessEvent(val uri: String) : Event()
     data class RedirectEvent(val uri: String, val redirects: Int) : Event()
     data class FailureEvent(
@@ -73,6 +74,8 @@ class PageViewModel : ViewModel() {
 
             Log.i(TAG, "sendRequest: got ${response.code} with meta \"${response.meta}\"")
             when (response.code.getCategory()) {
+                Response.Code.Category.INPUT ->
+                    handleInputResponse(response, uri)
                 Response.Code.Category.SUCCESS ->
                     handleSuccessResponse(response, uri)
                 Response.Code.Category.REDIRECT ->
@@ -87,6 +90,10 @@ class PageViewModel : ViewModel() {
 
     private fun signalError(message: String) {
         event.postValue(FailureEvent("Error", message))
+    }
+
+    private fun handleInputResponse(response: Response, uri: Uri) {
+        event.postValue(InputEvent(uri, response.meta))
     }
 
     private suspend fun handleSuccessResponse(response: Response, uri: Uri) {

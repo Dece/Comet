@@ -6,15 +6,22 @@ import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+import android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.setMargins
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.ActivityMainBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+
 
 @ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
@@ -130,6 +137,27 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         Log.d(TAG, "handleEvent: $event")
         if (!event.handled) {
             when (event) {
+                is PageViewModel.InputEvent -> {
+                    val editText = EditText(this).apply { inputType = InputType.TYPE_CLASS_TEXT }
+                    val inputView = FrameLayout(this).apply {
+                        addView(FrameLayout(this@MainActivity).apply {
+                            addView(editText)
+                            val params = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
+                            params.setMargins(resources.getDimensionPixelSize(R.dimen.text_margin))
+                            layoutParams = params
+                        })
+                    }
+                    AlertDialog.Builder(this)
+                        .setMessage(if (event.prompt.isNotEmpty()) event.prompt else "Input required")
+                        .setView(inputView)
+                        .setPositiveButton(android.R.string.ok) { _, _ ->
+                            val newUri = event.uri.buildUpon().query(editText.text.toString()).build()
+                            openUrl(newUri.toString(), base = currentUrl)
+                        }
+                        .setOnDismissListener { updateState(PageViewModel.State.IDLE) }
+                        .create()
+                        .show()
+                }
                 is PageViewModel.SuccessEvent -> {
                     currentUrl = event.uri
                     visitedUrls.add(event.uri)

@@ -1,7 +1,6 @@
 package dev.lowrespalmtree.comet
 
 import android.net.Uri
-import android.util.Log
 
 /**
  * Transform a relative URI to an absolute Gemini URI
