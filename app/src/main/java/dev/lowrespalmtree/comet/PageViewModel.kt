@@ -74,11 +74,11 @@ class PageViewModel : ViewModel() {
             Log.i(TAG, "sendRequest: got ${response.code} with meta \"${response.meta}\"")
             when (response.code.getCategory()) {
                 Response.Code.Category.SUCCESS ->
-                    handleRequestSuccess(response, uri)
+                    handleSuccessResponse(response, uri)
                 Response.Code.Category.REDIRECT ->
-                    handleRedirect(response, redirects = redirects + 1)
+                    handleRedirectResponse(response, redirects = redirects + 1)
                 Response.Code.Category.SERVER_ERROR, Response.Code.Category.CLIENT_ERROR ->
-                    handleError(response)
+                    handleErrorResponse(response)
                 else ->
                     signalError("Can't handle code ${response.code}.")
             }
@@ -87,10 +87,9 @@ class PageViewModel : ViewModel() {
 
     private fun signalError(message: String) {
         event.postValue(FailureEvent("Error", message))
-        state.postValue(State.IDLE)
     }
 
-    private suspend fun handleRequestSuccess(response: Response, uri: Uri) {
+    private suspend fun handleSuccessResponse(response: Response, uri: Uri) {
         state.postValue(State.RECEIVING)
 
         linesList.clear()
@@ -135,11 +134,11 @@ class PageViewModel : ViewModel() {
         state.postValue(State.IDLE)
     }
 
-    private fun handleRedirect(response: Response, redirects: Int) {
+    private fun handleRedirectResponse(response: Response, redirects: Int) {
         event.postValue(RedirectEvent(response.meta, redirects))
     }
 
-    private fun handleError(response: Response) {
+    private fun handleErrorResponse(response: Response) {
         val briefMessage = when (response.code) {
             Response.Code.TEMPORARY_FAILURE -> "40 Temporary failure"
             Response.Code.SERVER_UNAVAILABLE -> "41 Server unavailable"

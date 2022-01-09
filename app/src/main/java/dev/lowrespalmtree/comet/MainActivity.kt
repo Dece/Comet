@@ -130,6 +130,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                     if (!event.serverDetails.isNullOrEmpty())
                         message += "\n\n" + "Server details: ${event.serverDetails}"
                     alert(message, title = event.short)
+                    updateState(PageViewModel.State.IDLE)
                 }
             }
             event.handled = true
