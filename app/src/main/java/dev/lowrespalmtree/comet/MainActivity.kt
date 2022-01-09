@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         setContentView(binding.root)
 
         pageViewModel = ViewModelProvider(this)[PageViewModel::class.java]
-        adapter = ContentAdapter(listOf(), this)
+        adapter = ContentAdapter(this)
         binding.contentRecycler.layoutManager = LinearLayoutManager(this)
         binding.contentRecycler.adapter = adapter
 
@@ -110,7 +110,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
 
     private fun updateLines(lines: List<Line>) {
         Log.d(TAG, "updateLines: ${lines.size} lines")
-        adapter.setContent(lines)
+        adapter.setLines(lines)
     }
 
     private fun handleEvent(event: PageViewModel.Event) {
@@ -147,7 +147,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         try {
             startActivity(Intent(ACTION_VIEW, uri))
         } catch (e: ActivityNotFoundException) {
-            alert("Can't open this URL.")
+            alert("Can't find an app to open \"${uri.scheme}\" URLs.")
         }
     }
 

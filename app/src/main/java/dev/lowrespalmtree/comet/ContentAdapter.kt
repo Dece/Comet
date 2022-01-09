@@ -10,31 +10,106 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import dev.lowrespalmtree.comet.databinding.*
 
-class ContentAdapter(private var content: List<Line>, private val listener: ContentAdapterListen) :
+/**
+ * Adapter for a rendered Gemtext page.
+ *
+ * Considering each content line as a different block/View to render works until you want to render
+ * preformatted lines as a whole block. This adapter approaches this issue by mapping each line to
+ * a block, where most of the time it will be a 1-to-1 relation, but for blocks and possibly quotes
+ * it could be a n-to-1 relation: many lines belong to the same block. This of course changes a bit
+ * the way we have to render things.
+ */
+class ContentAdapter(private val listener: ContentAdapterListen) :
     RecyclerView.Adapter<ContentAdapter.ContentViewHolder>() {
 
-    private var lastLineCount = 0
+    private var lines = listOf<Line>()
+    private var currentLine = 0
+    private var blocks = mutableListOf<ContentBlock>()
+    private var lastBlockCount = 0
 
     interface ContentAdapterListen {
         fun onLinkClick(url: String)
     }
 
-    override fun getItemViewType(position: Int): Int =
-        when (content[position]) {
-            is EmptyLine -> TYPE_EMPTY
-            is ParagraphLine -> TYPE_PARAGRAPH
-            is LinkLine -> TYPE_LINK
-            is PreFenceLine -> TYPE_PRE_FENCE
-            is PreTextLine -> TYPE_PRE_TEXT
-            is BlockquoteLine -> TYPE_BLOCKQUOTE
-            is ListItemLine -> TYPE_LIST_ITEM
-            is TitleLine -> when ((content[position] as TitleLine).level) {
-                1 -> TYPE_TITLE_1
-                2 -> TYPE_TITLE_2
-                3 -> TYPE_TITLE_3
-                else -> error("invalid title level")
+    sealed class ContentBlock {
+        object Empty : ContentBlock()
+        class Paragraph(val text: String) : ContentBlock()
+        class Title(val text: String, val level: Int) : ContentBlock()
+        class Link(val url: String, val label: String) : ContentBlock()
+        class Pre(val caption: String, var content: String, var closed: Boolean) : ContentBlock()
+        class Blockquote(val text: String) : ContentBlock()
+        class ListItem(val text: String) : ContentBlock()
+    }
+
+    /** Replace the content rendered by the recycler. */
+    @SuppressLint("NotifyDataSetChanged")
+    fun setLines(newLines: List<Line>) {
+        lines = newLines.toList()  // Shallow copy to avoid concurrent update issues.
+        if (lines.isEmpty()) {
+            Log.d(TAG, "setLines: empty content")
+            currentLine = 0
+            blocks = mutableListOf()
+            lastBlockCount = 0
+            notifyDataSetChanged()
+        } else {
+            while (currentLine < lines.size) {
+                when (val line = lines[currentLine]) {
+                    is EmptyLine -> blocks.add(ContentBlock.Empty)
+                    is ParagraphLine -> blocks.add(ContentBlock.Paragraph(line.text))
+                    is LinkLine -> blocks.add(ContentBlock.Link(line.url, line.label))
+                    is BlockquoteLine -> blocks.add(ContentBlock.Blockquote(line.text))
+                    is ListItemLine -> blocks.add(ContentBlock.ListItem(line.text))
+                    is TitleLine -> blocks.add(ContentBlock.Title(line.text, line.level))
+                    is PreFenceLine -> {
+                        var justClosedBlock = false
+                        if (blocks.isNotEmpty()) {
+                            val lastBlock = blocks.last()
+                            if (lastBlock is ContentBlock.Pre && !lastBlock.closed) {
+                                lastBlock.closed = true
+                                justClosedBlock = true
+                            }
+                        }
+                        if (!justClosedBlock)
+                            blocks.add(ContentBlock.Pre(line.caption, "", false))
+                    }
+                    is PreTextLine -> {
+                        val lastBlock = blocks.last()
+                        if (lastBlock is ContentBlock.Pre && !lastBlock.closed)
+                            lastBlock.content += line.text + "\n"
+                        else
+                            Log.e(TAG, "setLines: unexpected preformatted line")
+                    }
+                }
+                currentLine++
             }
-            else -> error("unknown line type")
+            val numAdded = blocks.size - lastBlockCount
+            Log.d(TAG, "setContent: added $numAdded items")
+            notifyItemRangeInserted(lastBlockCount, numAdded)
+        }
+        lastBlockCount = blocks.size
+    }
+
+    sealed class ContentViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        class Empty(binding: GemtextEmptyBinding) : ContentViewHolder(binding.root)
+        class Paragraph(val binding: GemtextParagraphBinding) : ContentViewHolder(binding.root)
+        class Title1(val binding: GemtextTitle1Binding) : ContentViewHolder(binding.root)
+        class Title2(val binding: GemtextTitle2Binding) : ContentViewHolder(binding.root)
+        class Title3(val binding: GemtextTitle3Binding) : ContentViewHolder(binding.root)
+        class Link(val binding: GemtextLinkBinding) : ContentViewHolder(binding.root)
+        class Pre(val binding: GemtextPreformattedBinding) : ContentViewHolder(binding.root)
+        class Blockquote(val binding: GemtextBlockquoteBinding) : ContentViewHolder(binding.root)
+        class ListItem(val binding: GemtextListItemBinding) : ContentViewHolder(binding.root)
+    }
+
+    override fun getItemViewType(position: Int): Int =
+        when (val block = blocks[position]) {
+            is ContentBlock.Empty -> TYPE_EMPTY
+            is ContentBlock.Paragraph -> TYPE_PARAGRAPH
+            is ContentBlock.Link -> TYPE_LINK
+            is ContentBlock.Blockquote -> TYPE_BLOCKQUOTE
+            is ContentBlock.ListItem -> TYPE_LIST_ITEM
+            is ContentBlock.Pre -> TYPE_PREFORMATTED
+            is ContentBlock.Title -> block.level  // ruse
         }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ContentViewHolder {
@@ -46,8 +121,7 @@ class ContentAdapter(private var content: List<Line>, private val listener: Cont
                 TYPE_TITLE_2 -> ContentViewHolder.Title2(GemtextTitle2Binding.inflate(it))
                 TYPE_TITLE_3 -> ContentViewHolder.Title3(GemtextTitle3Binding.inflate(it))
                 TYPE_LINK -> ContentViewHolder.Link(GemtextLinkBinding.inflate(it))
-                TYPE_PRE_FENCE -> ContentViewHolder.PreFence(GemtextEmptyBinding.inflate(it))
-                TYPE_PRE_TEXT -> ContentViewHolder.PreText(GemtextPreformattedBinding.inflate(it))
+                TYPE_PREFORMATTED -> ContentViewHolder.Pre(GemtextPreformattedBinding.inflate(it))
                 TYPE_BLOCKQUOTE -> ContentViewHolder.Blockquote(GemtextBlockquoteBinding.inflate(it))
                 TYPE_LIST_ITEM -> ContentViewHolder.ListItem(GemtextListItemBinding.inflate(it))
                 else -> error("invalid view type")
@@ -57,80 +131,45 @@ class ContentAdapter(private var content: List<Line>, private val listener: Cont
 
     @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: ContentViewHolder, position: Int) {
-        val line = content[position]
-        when (holder) {
-            is ContentViewHolder.Paragraph ->
-                holder.binding.textView.text = (line as ParagraphLine).text
-            is ContentViewHolder.Title1 -> holder.binding.textView.text = (line as TitleLine).text
-            is ContentViewHolder.Title2 -> holder.binding.textView.text = (line as TitleLine).text
-            is ContentViewHolder.Title3 -> holder.binding.textView.text = (line as TitleLine).text
-            is ContentViewHolder.Link -> {
-                val text = if ((line as LinkLine).label.isNotEmpty()) line.label else line.url
-                val underlined = SpannableString(text)
-                underlined.setSpan(UnderlineSpan(), 0, underlined.length, 0)
-                holder.binding.textView.text = underlined
-                holder.binding.root.setOnClickListener { listener.onLinkClick(line.url) }
+        when (val block = blocks[position]) {
+            is ContentBlock.Empty -> {}
+            is ContentBlock.Paragraph ->
+                (holder as ContentViewHolder.Paragraph).binding.textView.text = block.text
+            is ContentBlock.Blockquote ->
+                (holder as ContentViewHolder.Blockquote).binding.textView.text = block.text
+            is ContentBlock.ListItem ->
+                (holder as ContentViewHolder.ListItem).binding.textView.text = "\u25CF ${block.text}"
+            is ContentBlock.Title -> {
+                when (block.level) {
+                    1 -> (holder as ContentViewHolder.Title1).binding.textView.text = block.text
+                    2 -> (holder as ContentViewHolder.Title2).binding.textView.text = block.text
+                    3 -> (holder as ContentViewHolder.Title3).binding.textView.text = block.text
+                }
             }
-            is ContentViewHolder.PreText ->
-                holder.binding.textView.text = (line as PreTextLine).text
-            is ContentViewHolder.Blockquote ->
-                holder.binding.textView.text = (line as BlockquoteLine).text
-            is ContentViewHolder.ListItem ->
-                holder.binding.textView.text = "\u25CF ${(line as ListItemLine).text}"
-            else -> {}
+            is ContentBlock.Link -> {
+                val label = if (block.label.isNotBlank()) block.label else block.url
+                val underlinedLabel = SpannableString(label)
+                underlinedLabel.setSpan(UnderlineSpan(), 0, underlinedLabel.length, 0)
+                (holder as ContentViewHolder.Link).binding.textView.text = underlinedLabel
+                holder.binding.root.setOnClickListener { listener.onLinkClick(block.url) }
+            }
+            is ContentBlock.Pre ->
+                (holder as ContentViewHolder.Pre).binding.textView.text = block.content
         }
     }
 
-    override fun getItemCount(): Int = content.size
-
-    /**
-     * Replace the content rendered by the recycler.
-     *
-     * The new content list may or may not be the same object as the previous one, we don't
-     * assume anything. The assumptions this function do however are:
-     * - If the new content is empty, we are about to load new content, so clear the recycler.
-     * - If it's longer than before, we received new streamed content, so *append* data.
-     * - If it's shorter or the same size than before, we do not notify anything and let the caller
-     *   manage the changes itself.
-     */
-    @SuppressLint("NotifyDataSetChanged")
-    fun setContent(newContent: List<Line>) {
-        content = newContent.toList()  // Shallow copy to avoid concurrent update issues.
-        if (content.isEmpty()) {
-            Log.d(TAG, "setContent: empty content")
-            notifyDataSetChanged()
-        } else if (content.size > lastLineCount) {
-            val numAdded = content.size - lastLineCount
-            Log.d(TAG, "setContent: added $numAdded items")
-            notifyItemRangeInserted(lastLineCount, numAdded)
-        }
-        lastLineCount = content.size
-    }
-
-    sealed class ContentViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        class Empty(val binding: GemtextEmptyBinding) : ContentViewHolder(binding.root)
-        class Paragraph(val binding: GemtextParagraphBinding) : ContentViewHolder(binding.root)
-        class Title1(val binding: GemtextTitle1Binding) : ContentViewHolder(binding.root)
-        class Title2(val binding: GemtextTitle2Binding) : ContentViewHolder(binding.root)
-        class Title3(val binding: GemtextTitle3Binding) : ContentViewHolder(binding.root)
-        class Link(val binding: GemtextLinkBinding) : ContentViewHolder(binding.root)
-        class PreFence(val binding: GemtextEmptyBinding) : ContentViewHolder(binding.root)
-        class PreText(val binding: GemtextPreformattedBinding) : ContentViewHolder(binding.root)
-        class Blockquote(val binding: GemtextBlockquoteBinding) : ContentViewHolder(binding.root)
-        class ListItem(val binding: GemtextListItemBinding) : ContentViewHolder(binding.root)
-    }
+    override fun getItemCount(): Int = blocks.size
 
     companion object {
         const val TAG = "ContentRecycler"
         const val TYPE_EMPTY = 0
-        const val TYPE_PARAGRAPH = 1
-        const val TYPE_TITLE_1 = 2
-        const val TYPE_TITLE_2 = 3
-        const val TYPE_TITLE_3 = 4
+        const val TYPE_TITLE_1 = 1
+        const val TYPE_TITLE_2 = 2
+        const val TYPE_TITLE_3 = 3
+        const val TYPE_PARAGRAPH = 4
         const val TYPE_LINK = 5
-        const val TYPE_PRE_FENCE = 6
-        const val TYPE_PRE_TEXT = 7
-        const val TYPE_BLOCKQUOTE = 8
-        const val TYPE_LIST_ITEM = 9
+        const val TYPE_PREFORMATTED = 6
+        const val TYPE_BLOCKQUOTE = 7
+        const val TYPE_LIST_ITEM = 8
     }
 }

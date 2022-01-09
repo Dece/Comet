@@ -21,6 +21,7 @@ class ListItemLine(val text: String) : Line
 
 const val TAG = "Gemtext"
 
+/** Pipe incoming gemtext data into parsed Lines. */
 fun parseData(
     inChannel: Channel<ByteArray>,
     charset: Charset,
@@ -51,19 +52,23 @@ fun parseData(
     return channel
 }
 
+/** Parse a single line into a Line object. */
 private fun parseLine(line: CharBuffer, isPreformatted: Boolean): Line =
     when {
-        line.isEmpty() -> EmptyLine()
         line.startsWith("###") -> TitleLine(3, getCharsFrom(line, 3))
         line.startsWith("##") -> TitleLine(2, getCharsFrom(line, 2))
         line.startsWith("#") -> TitleLine(1, getCharsFrom(line, 1))
-        line.startsWith(">") -> BlockquoteLine(getCharsFrom(line, 1))
         line.startsWith("```") -> PreFenceLine(getCharsFrom(line, 3))
         line.startsWith("* ") -> ListItemLine(getCharsFrom(line, 2))
+        line.startsWith(">") -> getCharsFrom(line, 1)  // eh empty lines in quotes…
+            .run { if (isBlank()) EmptyLine() else BlockquoteLine(this) }
         line.startsWith("=>") -> getCharsFrom(line, 2)
             .split(" ", limit = 2)
             .run { LinkLine(get(0), if (size == 2) get(1).trimStart() else "") }
-        else -> if (isPreformatted) PreTextLine(line.toString()) else ParagraphLine(line.toString())
+        isPreformatted -> PreTextLine(line.toString())
+        line.isEmpty() -> EmptyLine()
+        else -> ParagraphLine(line.toString())
     }
 
+/** Get trimmed string from the char buffer starting from this position. */
 private fun getCharsFrom(line: CharBuffer, index: Int) = line.substring(index).trim()
