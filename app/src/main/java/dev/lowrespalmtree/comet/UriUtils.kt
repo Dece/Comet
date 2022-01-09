@@ -36,7 +36,7 @@ fun joinUrls(base: String, relative: String): Uri {
     )
     return Uri.Builder()
         .scheme(baseUri.scheme)
-        .authority(baseUri.authority)
+        .encodedAuthority(baseUri.authority)
         .path(newPath)
         .query(relUri.query)
         .fragment(relUri.fragment)
