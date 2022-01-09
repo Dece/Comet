@@ -140,7 +140,9 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                 is PageViewModel.FailureEvent -> {
                     var message = event.details
                     if (!event.serverDetails.isNullOrEmpty())
-                        message += "\n\n" + "Server details: ${event.serverDetails}"
+                        message += "\n\nServer details: ${event.serverDetails}"
+                    if (!isConnectedToNetwork(this))
+                        message += "\n\nInternet may be inaccessible…"
                     alert(message, title = event.short)
                     updateState(PageViewModel.State.IDLE)
                 }
