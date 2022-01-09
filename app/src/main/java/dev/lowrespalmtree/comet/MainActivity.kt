@@ -103,6 +103,7 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
                 binding.contentProgressBar.show()
             }
             PageViewModel.State.RECEIVING -> {
+                binding.appBar.setExpanded(true, true)
                 binding.contentSwipeLayout.isRefreshing = false
             }
         }

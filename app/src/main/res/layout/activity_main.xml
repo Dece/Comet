@@ -11,12 +11,12 @@
         android:layout_width="match_parent"
         android:layout_height="56dp">
 
-        <com.google.android.material.appbar.CollapsingToolbarLayout
-            android:id="@+id/collapsing_toolbar"
+        <Toolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:contentScrim="?attr/colorPrimary"
-            app:layout_scrollFlags="scroll|enterAlways|enterAlwaysCollapsed"
+            app:layout_scrollFlags="scroll|enterAlways"
             app:toolbarId="@+id/toolbar">
 
             <EditText
@@ -31,7 +31,7 @@
                 android:text=""
                 tools:ignore="TextContrastCheck" />
 
-        </com.google.android.material.appbar.CollapsingToolbarLayout>
+        </Toolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 
