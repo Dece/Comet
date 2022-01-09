@@ -75,6 +75,16 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         openUrl(url, base = if (currentUrl.isNotEmpty()) currentUrl else null)
     }
 
+    /**
+     * Open an URL.
+     *
+     * This function can be called after the user entered an URL in the app bar, clicked on a link,
+     * whatever. To make the user's life a bit easier, this function also makes a few guesses:
+     * - If the URL is not absolute, make it so from a base URL (e.g. the current URL) or assume
+     *   the user only typed a hostname without scheme and use a utility function to make it
+     *   absolute.
+     * - If it's an absolute Gemini URL with an empty path, use "/" instead as per the spec.
+     */
     private fun openUrl(url: String, base: String? = null, redirections: Int = 0) {
         if (redirections >= 5) {
             alert("Too many redirections.")
@@ -84,6 +94,8 @@ class MainActivity : AppCompatActivity(), ContentAdapter.ContentAdapterListen {
         var uri = Uri.parse(url)
         if (!uri.isAbsolute) {
             uri = if (!base.isNullOrEmpty()) joinUrls(base, url) else toGeminiUri(uri)
+        } else if (uri.scheme == "gemini" && uri.path.isNullOrEmpty()) {
+            uri = uri.buildUpon().path("/").build()
         }
 
         when (uri.scheme) {

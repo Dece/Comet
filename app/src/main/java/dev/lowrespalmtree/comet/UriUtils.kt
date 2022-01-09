@@ -15,6 +15,7 @@ fun toGeminiUri(uri: Uri): Uri =
     Uri.Builder()
         .scheme("gemini")
         .authority(uri.path)
+        .path("/")
         .query(uri.query)
         .fragment(uri.fragment)
         .build()
