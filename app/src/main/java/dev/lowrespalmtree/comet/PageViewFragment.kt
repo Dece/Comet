@@ -63,6 +63,11 @@ class PageViewFragment : Fragment(), ContentAdapter.ContentAdapterListener {
         pageViewModel.event.observe(viewLifecycleOwner, { handleEvent(it) })
 
         activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner) { onBackPressed() }
+
+        if (visitedUrls.isEmpty()) {
+            PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .getString("home", null)?.let { openUrl(it) }
+        }
     }
 
     override fun onLinkClick(url: String) {
