@@ -14,6 +14,8 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.TextView
+import androidx.activity.addCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.setMargins
 import androidx.fragment.app.Fragment
@@ -51,36 +53,36 @@ class PageViewFragment : Fragment(), ContentAdapter.ContentAdapterListener {
         binding.contentRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.contentRecycler.adapter = adapter
 
-        binding.addressBar.setOnEditorActionListener { editText, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                openUrl(editText.text.toString())
-                activity?.run {
-                    val imm = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.hideSoftInputFromWindow(editText.windowToken, 0)
-                }
-                editText.clearFocus()
-                true
-            } else {
-                false
-            }
-        }
+        binding.addressBar.setOnEditorActionListener { v, id, _ -> onAddressBarAction(v, id) }
 
         binding.contentSwipeLayout.setOnRefreshListener { openUrl(currentUrl) }
 
         pageViewModel.state.observe(viewLifecycleOwner, { updateState(it) })
         pageViewModel.lines.observe(viewLifecycleOwner, { updateLines(it) })
         pageViewModel.event.observe(viewLifecycleOwner, { handleEvent(it) })
+
+        activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner) { onBackPressed() }
     }
 
     override fun onLinkClick(url: String) {
         openUrl(url, base = if (currentUrl.isNotEmpty()) currentUrl else null)
     }
 
-    fun onBackPressed(): Boolean {
-        visitedUrls.removeLastOrNull()  // Always remove current page first.
-        val previousUrl = visitedUrls.removeLastOrNull()
-        if (previousUrl != null) {
-            openUrl(previousUrl)
+    private fun onBackPressed() {
+        if (visitedUrls.size >= 2) {
+            visitedUrls.removeLastOrNull()  // Always remove current page first.
+            openUrl(visitedUrls.removeLastOrNull()!!)
+        }
+    }
+
+    private fun onAddressBarAction(addressBar: TextView, actionId: Int): Boolean {
+        if (actionId == EditorInfo.IME_ACTION_DONE) {
+            openUrl(addressBar.text.toString())
+            activity?.run {
+                val imm = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(addressBar.windowToken, 0)
+            }
+            addressBar.clearFocus()
             return true
         }
         return false
