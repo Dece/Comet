@@ -128,7 +128,7 @@ class PageViewFragment : Fragment(), ContentAdapter.ContentAdapterListener {
                 binding.contentProgressBar.show()
             }
             PageViewModel.State.RECEIVING -> {
-                binding.appBar.setExpanded(true, true)
+                binding.appBarLayout.setExpanded(true, true)
                 binding.contentSwipeLayout.isRefreshing = false
             }
         }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    app:startDestination="@id/pageViewFragment">
+
+    <fragment
+        android:id="@+id/pageViewFragment"
+        android:name="dev.lowrespalmtree.comet.PageViewFragment"
+        android:label="PageViewFragment" >
+    </fragment>
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="dev.lowrespalmtree.comet.SettingsFragment"
+        android:label="SettingsFragment">
+    </fragment>
+</navigation>
