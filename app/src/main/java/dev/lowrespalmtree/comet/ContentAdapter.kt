@@ -161,15 +161,15 @@ class ContentAdapter(private val listener: ContentAdapterListener) :
     override fun getItemCount(): Int = blocks.size
 
     companion object {
-        const val TAG = "ContentRecycler"
-        const val TYPE_EMPTY = 0
-        const val TYPE_TITLE_1 = 1
-        const val TYPE_TITLE_2 = 2
-        const val TYPE_TITLE_3 = 3
-        const val TYPE_PARAGRAPH = 4
-        const val TYPE_LINK = 5
-        const val TYPE_PREFORMATTED = 6
-        const val TYPE_BLOCKQUOTE = 7
-        const val TYPE_LIST_ITEM = 8
+        private const val TAG = "ContentRecycler"
+        private const val TYPE_EMPTY = 0
+        private const val TYPE_TITLE_1 = 1
+        private const val TYPE_TITLE_2 = 2
+        private const val TYPE_TITLE_3 = 3
+        private const val TYPE_PARAGRAPH = 4
+        private const val TYPE_LINK = 5
+        private const val TYPE_PREFORMATTED = 6
+        private const val TYPE_BLOCKQUOTE = 7
+        private const val TYPE_LIST_ITEM = 8
     }
 }

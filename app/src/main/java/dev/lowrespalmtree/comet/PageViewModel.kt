@@ -184,6 +184,6 @@ class PageViewModel : ViewModel() {
     }
 
     companion object {
-        const val TAG = "PageViewModel"
+        private const val TAG = "PageViewModel"
     }
 }

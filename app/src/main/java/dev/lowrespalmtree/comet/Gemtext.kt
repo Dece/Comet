@@ -19,7 +19,7 @@ class PreTextLine(val text: String) : Line
 class BlockquoteLine(val text: String) : Line
 class ListItemLine(val text: String) : Line
 
-const val TAG = "Gemtext"
+private const val TAG = "Gemtext"
 
 /** Pipe incoming gemtext data into parsed Lines. */
 fun parseData(
