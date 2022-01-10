@@ -7,11 +7,9 @@
     <fragment
         android:id="@+id/pageViewFragment"
         android:name="dev.lowrespalmtree.comet.PageViewFragment"
-        android:label="PageViewFragment" >
-    </fragment>
+        android:label="PageViewFragment" />
     <fragment
         android:id="@+id/settingsFragment"
         android:name="dev.lowrespalmtree.comet.SettingsFragment"
-        android:label="SettingsFragment">
-    </fragment>
+        android:label="SettingsFragment" />
 </navigation>

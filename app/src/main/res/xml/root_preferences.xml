@@ -1,11 +1,16 @@
-<androidx.preference.PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<androidx.preference.PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <PreferenceCategory app:title="@string/messages_header">
+    <PreferenceCategory app:title="@string/pref_general_header">
 
         <EditTextPreference
-            app:key="signature"
-            app:title="@string/signature_title"
+            app:key="home"
+            app:title="@string/pref_home_title"
             app:useSimpleSummaryProvider="true" />
+
+        <Preference
+            app:key="home_set"
+            app:title="@string/pref_home_set" />
 
         <ListPreference
             app:defaultValue="reply"
@@ -17,7 +22,23 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="@string/sync_header">
+    <PreferenceCategory app:title="@string/pref_protocol_header">
+
+        <SeekBarPreference
+            app:key="connection_timeout"
+            app:title="@string/pref_connection_timeout_title"
+            app:seekBarIncrement="1"
+            app:showSeekBarValue="true"
+            android:max="60"
+            android:defaultValue="10" />
+
+        <SeekBarPreference
+            app:key="read_timeout"
+            app:title="@string/pref_read_timeout_title"
+            app:seekBarIncrement="1"
+            app:showSeekBarValue="true"
+            android:max="60"
+            android:defaultValue="10" />
 
         <SwitchPreferenceCompat
             app:key="sync"
