@@ -19,7 +19,7 @@ import dev.lowrespalmtree.comet.databinding.*
  * it could be a n-to-1 relation: many lines belong to the same block. This of course changes a bit
  * the way we have to render things.
  */
-class ContentAdapter(private val listener: ContentAdapterListen) :
+class ContentAdapter(private val listener: ContentAdapterListener) :
     RecyclerView.Adapter<ContentAdapter.ContentViewHolder>() {
 
     private var lines = listOf<Line>()
@@ -27,7 +27,7 @@ class ContentAdapter(private val listener: ContentAdapterListen) :
     private var blocks = mutableListOf<ContentBlock>()
     private var lastBlockCount = 0
 
-    interface ContentAdapterListen {
+    interface ContentAdapterListener {
         fun onLinkClick(url: String)
     }
 
