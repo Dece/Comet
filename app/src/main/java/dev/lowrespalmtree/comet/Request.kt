@@ -17,13 +17,13 @@ import javax.net.ssl.X509TrustManager
 class Request(private val uri: Uri) {
     private val port get() = if (uri.port > 0) uri.port else 1965
 
-    fun connect(): SSLSocket {
+    fun connect(connectionTimeout: Int, readTimeout: Int): SSLSocket {
         Log.d(TAG, "connect")
         val context = SSLContext.getInstance("TLSv1.2")
         context.init(null, arrayOf(TrustManager()), null)
         val socket = context.socketFactory.createSocket() as SSLSocket
-        socket.soTimeout = 10000
-        socket.connect(InetSocketAddress(uri.host, port), 10000)
+        socket.soTimeout = readTimeout * 1000
+        socket.connect(InetSocketAddress(uri.host, port), connectionTimeout * 1000)
         socket.startHandshake()
         return socket
     }
@@ -69,6 +69,8 @@ class Request(private val uri: Uri) {
     }
 
     companion object {
-        const val TAG = "Request"
+        private const val TAG = "Request"
+        const val DEFAULT_CONNECTION_TIMEOUT_SEC = 10
+        const val DEFAULT_READ_TIMEOUT_SEC = 10
     }
 }

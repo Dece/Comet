@@ -20,6 +20,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.view.setMargins
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.FragmentPageViewBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -112,7 +113,14 @@ class PageViewFragment : Fragment(), ContentAdapter.ContentAdapterListener {
         }
 
         when (uri.scheme) {
-            "gemini" -> pageViewModel.sendGeminiRequest(uri)
+            "gemini" -> {
+                val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                val connectionTimeout =
+                    prefs.getInt("connection_timeout", Request.DEFAULT_CONNECTION_TIMEOUT_SEC)
+                val readTimeout =
+                    prefs.getInt("read_timeout", Request.DEFAULT_READ_TIMEOUT_SEC)
+                pageViewModel.sendGeminiRequest(uri, connectionTimeout, readTimeout)
+            }
             else -> openUnknownScheme(uri)
         }
     }

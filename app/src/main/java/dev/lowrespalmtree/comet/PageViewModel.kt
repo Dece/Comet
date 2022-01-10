@@ -39,14 +39,14 @@ class PageViewModel : ViewModel() {
      *
      * The URI must be valid, absolute and with a gemini scheme.
      */
-    fun sendGeminiRequest(uri: Uri, redirects: Int = 0) {
+    fun sendGeminiRequest(uri: Uri, connectionTimeout: Int, readTimeout: Int, redirects: Int = 0) {
         Log.d(TAG, "sendRequest: URI \"$uri\"")
         state.postValue(State.CONNECTING)
         requestJob?.apply { if (isActive) cancel() }
         requestJob = viewModelScope.launch(Dispatchers.IO) {
             val response = try {
                 val request = Request(uri)
-                val socket = request.connect()
+                val socket = request.connect(connectionTimeout, readTimeout)
                 val channel = request.proceed(socket, this)
                 Response.from(channel, viewModelScope)
             } catch (e: Exception) {
