@@ -8,8 +8,22 @@
         android:id="@+id/pageViewFragment"
         android:name="dev.lowrespalmtree.comet.PageViewFragment"
         android:label="PageViewFragment" />
+    <action
+        android:id="@+id/action_global_pageViewFragment"
+        app:destination="@id/pageViewFragment"
+        app:enterAnim="@anim/nav_default_enter_anim"
+        app:exitAnim="@anim/nav_default_exit_anim"
+        app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+        app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     <fragment
         android:id="@+id/settingsFragment"
         android:name="dev.lowrespalmtree.comet.SettingsFragment"
         android:label="SettingsFragment" />
+    <action
+        android:id="@+id/action_global_settingsFragment"
+        app:destination="@id/settingsFragment"
+        app:enterAnim="@anim/nav_default_enter_anim"
+        app:exitAnim="@anim/nav_default_exit_anim"
+        app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+        app:popExitAnim="@anim/nav_default_pop_exit_anim" />
 </navigation>

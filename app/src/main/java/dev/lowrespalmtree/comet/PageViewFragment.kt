@@ -77,7 +77,7 @@ class PageViewFragment : Fragment(), ContentAdapter.ContentAdapterListener {
     private fun onBackPressed() {
         if (visitedUrls.size >= 2) {
             visitedUrls.removeLastOrNull()  // Always remove current page first.
-            openUrl(visitedUrls.removeLastOrNull()!!)
+            visitedUrls.removeLastOrNull()?.also { openUrl(it) }
         }
     }
 
