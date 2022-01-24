@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/home"
+        android:id="@+id/homeItem"
         android:icon="@android:drawable/ic_menu_myplaces"
-        android:title="@string/home"
-        android:onClick="goHome" />
+        android:onClick="goHome"
+        android:title="@string/home" />
     <item
-        android:id="@+id/history"
+        android:id="@+id/historyFragment"
         android:icon="@android:drawable/ic_menu_recent_history"
         android:title="@string/history" />
     <item
-        android:id="@+id/settings"
+        android:id="@+id/settingsFragment"
         android:icon="@android:drawable/ic_menu_preferences"
-        android:title="@string/settings"
-        android:onClick="openSettings" />
+        android:title="@string/settings" />
 </menu>

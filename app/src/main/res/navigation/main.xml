@@ -16,6 +16,17 @@
         app:popEnterAnim="@anim/nav_default_pop_enter_anim"
         app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     <fragment
+        android:id="@+id/historyFragment"
+        android:name="dev.lowrespalmtree.comet.HistoryFragment"
+        android:label="HistoryFragment" />
+    <action
+        android:id="@+id/action_global_historyFragment"
+        app:destination="@id/historyFragment"
+        app:enterAnim="@anim/nav_default_enter_anim"
+        app:exitAnim="@anim/nav_default_exit_anim"
+        app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+        app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    <fragment
         android:id="@+id/settingsFragment"
         android:name="dev.lowrespalmtree.comet.SettingsFragment"
         android:label="SettingsFragment" />

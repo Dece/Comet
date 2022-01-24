@@ -22,11 +22,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import dev.lowrespalmtree.comet.ContentAdapter.ContentAdapterListener
 import dev.lowrespalmtree.comet.databinding.FragmentPageViewBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
-class PageViewFragment : Fragment(), ContentAdapter.ContentAdapterListener {
+class PageViewFragment : Fragment(), ContentAdapterListener {
     private lateinit var binding: FragmentPageViewBinding
     private lateinit var pageViewModel: PageViewModel
     private lateinit var adapter: ContentAdapter
@@ -64,9 +65,11 @@ class PageViewFragment : Fragment(), ContentAdapter.ContentAdapterListener {
 
         activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner) { onBackPressed() }
 
-        if (visitedUrls.isEmpty()) {
-            PreferenceManager.getDefaultSharedPreferences(requireContext())
-                .getString("home", null)?.let { openUrl(it) }
+        val url = arguments?.getString("url")
+        if (!url.isNullOrEmpty()) {
+            openUrl(url)
+        } else if (visitedUrls.isEmpty()) {
+            Preferences.getHomeUrl(requireContext())?.let { openUrl(it) }
         }
     }
 

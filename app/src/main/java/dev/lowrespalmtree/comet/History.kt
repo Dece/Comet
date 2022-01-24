@@ -38,5 +38,7 @@ object History {
             dao.update(entry.also { it.title = title; it.lastVisit = now })
     }
 
+    suspend fun getAll(): List<HistoryEntry> = Database.INSTANCE.historyEntryDao().getAll()
+
     suspend fun getLast(): HistoryEntry? = Database.INSTANCE.historyEntryDao().getLast()
 }

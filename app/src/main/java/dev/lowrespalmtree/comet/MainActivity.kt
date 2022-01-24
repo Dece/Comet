@@ -1,16 +1,19 @@
 package dev.lowrespalmtree.comet
 
 import android.os.Bundle
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import androidx.preference.PreferenceManager
 import dev.lowrespalmtree.comet.databinding.ActivityMainBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private var navHost: NavHostFragment? = null
+    private var nhf: NavHostFragment? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,22 +22,15 @@ class MainActivity : AppCompatActivity() {
 
         Database.init(applicationContext)  // TODO move to App Startup?
 
-        navHost = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment?
-        navHost?.also { binding.drawerNavigation.setupWithNavController(it.navController) }
+        nhf = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment?
+        nhf?.also { binding.drawerNavigation.setupWithNavController(it.navController) }
     }
 
-    fun goHome() {
-        navHost?.navController?.navigate(R.id.action_global_pageViewFragment)
-        binding.drawerLayout.closeDrawers()
-    }
-
-    fun openHistory() {
-        binding.drawerLayout.closeDrawers()
-        // TODO
-    }
-
-    fun openSettings() {
-        navHost?.navController?.navigate(R.id.action_global_settingsFragment)
+    /** Navigate to the PageViewFragment; this will automatically use the home URL if any. */
+    fun goHome(item: MenuItem) {
+        val bundle = bundleOf()
+        Preferences.getHomeUrl(this)?.let { bundle.putString("url", it) }
+        nhf?.navController?.navigate(R.id.action_global_pageViewFragment, bundle)
         binding.drawerLayout.closeDrawers()
     }
 }
