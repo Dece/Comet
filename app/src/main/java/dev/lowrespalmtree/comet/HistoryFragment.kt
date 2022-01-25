@@ -47,7 +47,7 @@ class HistoryFragment : Fragment(), HistoryItemAdapterListener {
 
     override fun onItemClick(url: String) {
         val bundle = bundleOf("url" to url)
-        findNavController().navigate(R.id.action_global_pageViewFragment, bundle)
+        findNavController().navigate(R.id.action_global_pageFragment, bundle)
     }
 
     @ExperimentalCoroutinesApi

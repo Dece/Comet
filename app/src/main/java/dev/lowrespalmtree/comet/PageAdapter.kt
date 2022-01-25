@@ -19,8 +19,8 @@ import dev.lowrespalmtree.comet.databinding.*
  * it could be a n-to-1 relation: many lines belong to the same block. This of course changes a bit
  * the way we have to render things.
  */
-class ContentAdapter(private val listener: ContentAdapterListener) :
-    RecyclerView.Adapter<ContentAdapter.ContentViewHolder>() {
+class PageAdapter(private val listener: ContentAdapterListener) :
+    RecyclerView.Adapter<PageAdapter.ContentViewHolder>() {
 
     private var lines = listOf<Line>()
     private var currentLine = 0
@@ -161,7 +161,7 @@ class ContentAdapter(private val listener: ContentAdapterListener) :
     override fun getItemCount(): Int = blocks.size
 
     companion object {
-        private const val TAG = "ContentRecycler"
+        private const val TAG = "PageAdapter"
         private const val TYPE_EMPTY = 0
         private const val TYPE_TITLE_1 = 1
         private const val TYPE_TITLE_2 = 2

@@ -22,15 +22,15 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import dev.lowrespalmtree.comet.ContentAdapter.ContentAdapterListener
+import dev.lowrespalmtree.comet.PageAdapter.ContentAdapterListener
 import dev.lowrespalmtree.comet.databinding.FragmentPageViewBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
-class PageViewFragment : Fragment(), ContentAdapterListener {
+class PageFragment : Fragment(), ContentAdapterListener {
     private lateinit var binding: FragmentPageViewBinding
     private lateinit var pageViewModel: PageViewModel
-    private lateinit var adapter: ContentAdapter
+    private lateinit var adapter: PageAdapter
 
     /** Property to access and set the current address bar URL value. */
     private var currentUrl
@@ -51,7 +51,7 @@ class PageViewFragment : Fragment(), ContentAdapterListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         pageViewModel = ViewModelProvider(this)[PageViewModel::class.java]
-        adapter = ContentAdapter(this)
+        adapter = PageAdapter(this)
         binding.contentRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.contentRecycler.adapter = adapter
 
@@ -223,6 +223,6 @@ class PageViewFragment : Fragment(), ContentAdapterListener {
     }
 
     companion object {
-        private const val TAG = "PageViewFragment"
+        private const val TAG = "PageFragment"
     }
 }

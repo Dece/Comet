@@ -6,7 +6,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.bundleOf
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
-import androidx.preference.PreferenceManager
 import dev.lowrespalmtree.comet.databinding.ActivityMainBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -27,10 +26,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Navigate to the PageViewFragment; this will automatically use the home URL if any. */
-    fun goHome(item: MenuItem) {
+    fun goHome(@Suppress("unused_parameter") item: MenuItem) {
         val bundle = bundleOf()
         Preferences.getHomeUrl(this)?.let { bundle.putString("url", it) }
-        nhf?.navController?.navigate(R.id.action_global_pageViewFragment, bundle)
+        nhf?.navController?.navigate(R.id.action_global_pageFragment, bundle)
         binding.drawerLayout.closeDrawers()
     }
 }

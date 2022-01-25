@@ -2,15 +2,15 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main"
-    app:startDestination="@id/pageViewFragment">
+    app:startDestination="@id/pageFragment">
 
     <fragment
-        android:id="@+id/pageViewFragment"
-        android:name="dev.lowrespalmtree.comet.PageViewFragment"
+        android:id="@+id/pageFragment"
+        android:name="dev.lowrespalmtree.comet.PageFragment"
         android:label="PageViewFragment" />
     <action
-        android:id="@+id/action_global_pageViewFragment"
-        app:destination="@id/pageViewFragment"
+        android:id="@+id/action_global_pageFragment"
+        app:destination="@id/pageFragment"
         app:enterAnim="@anim/nav_default_enter_anim"
         app:exitAnim="@anim/nav_default_exit_anim"
         app:popEnterAnim="@anim/nav_default_pop_enter_anim"
