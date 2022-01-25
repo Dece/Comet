@@ -3,6 +3,7 @@ package dev.lowrespalmtree.comet
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
@@ -13,12 +14,17 @@ import java.net.UnknownHostException
 import java.nio.charset.Charset
 
 @ExperimentalCoroutinesApi
-class PageViewModel : ViewModel() {
+class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedStateHandle) :
+    ViewModel() {
+    var currentUrl: String = ""
     private var requestJob: Job? = null
     val state: MutableLiveData<State> by lazy { MutableLiveData<State>(State.IDLE) }
     private var linesList = ArrayList<Line>()
     val lines: MutableLiveData<List<Line>> by lazy { MutableLiveData<List<Line>>() }
     val event: MutableLiveData<Event> by lazy { MutableLiveData<Event>() }
+
+    /** A non-saved list of visited URLs. Not an history, just used for going back. */
+    val visitedUrls = mutableListOf<String>()
 
     enum class State {
         IDLE, CONNECTING, RECEIVING

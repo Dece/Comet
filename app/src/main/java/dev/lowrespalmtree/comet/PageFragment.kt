@@ -19,7 +19,7 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.setMargins
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.PageAdapter.ContentAdapterListener
@@ -28,29 +28,30 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
 class PageFragment : Fragment(), ContentAdapterListener {
+    private val vm: PageViewModel by viewModels()
     private lateinit var binding: FragmentPageViewBinding
-    private lateinit var pageViewModel: PageViewModel
     private lateinit var adapter: PageAdapter
 
     /** Property to access and set the current address bar URL value. */
-    private var currentUrl
-        get() = binding.addressBar.text.toString()
-        set(value) = binding.addressBar.setText(value)
-
-    /** A non-saved list of visited URLs. Not an history, just used for going back. */
-    private val visitedUrls = mutableListOf<String>()
+    private var currentUrl: String
+        get() = vm.currentUrl
+        set(value) {
+            vm.currentUrl = value
+            binding.addressBar.setText(value)
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        Log.d(TAG, "onCreateView")
         binding = FragmentPageViewBinding.inflate(layoutInflater)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        pageViewModel = ViewModelProvider(this)[PageViewModel::class.java]
+        Log.d(TAG, "onViewCreated")
         adapter = PageAdapter(this)
         binding.contentRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.contentRecycler.adapter = adapter
@@ -59,16 +60,20 @@ class PageFragment : Fragment(), ContentAdapterListener {
 
         binding.contentSwipeLayout.setOnRefreshListener { openUrl(currentUrl) }
 
-        pageViewModel.state.observe(viewLifecycleOwner, { updateState(it) })
-        pageViewModel.lines.observe(viewLifecycleOwner, { updateLines(it) })
-        pageViewModel.event.observe(viewLifecycleOwner, { handleEvent(it) })
+        vm.state.observe(viewLifecycleOwner, { updateState(it) })
+        vm.lines.observe(viewLifecycleOwner, { updateLines(it) })
+        vm.event.observe(viewLifecycleOwner, { handleEvent(it) })
 
         activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner) { onBackPressed() }
 
         val url = arguments?.getString("url")
         if (!url.isNullOrEmpty()) {
+            Log.d(TAG, "onViewCreated: open \"$url\"")
             openUrl(url)
-        } else if (visitedUrls.isEmpty()) {
+        } else if (vm.currentUrl.isNotEmpty()) {
+            Log.d(TAG, "onViewCreated: reuse current URL, probably fragment recreation")
+        } else if (vm.visitedUrls.isEmpty()) {
+            Log.d(TAG, "onViewCreated: no current URL, open home if configured")
             Preferences.getHomeUrl(requireContext())?.let { openUrl(it) }
         }
     }
@@ -78,9 +83,9 @@ class PageFragment : Fragment(), ContentAdapterListener {
     }
 
     private fun onBackPressed() {
-        if (visitedUrls.size >= 2) {
-            visitedUrls.removeLastOrNull()  // Always remove current page first.
-            visitedUrls.removeLastOrNull()?.also { openUrl(it) }
+        if (vm.visitedUrls.size >= 2) {
+            vm.visitedUrls.removeLastOrNull()  // Always remove current page first.
+            vm.visitedUrls.removeLastOrNull()?.also { openUrl(it) }
         }
     }
 
@@ -127,7 +132,7 @@ class PageFragment : Fragment(), ContentAdapterListener {
                     prefs.getInt("connection_timeout", Request.DEFAULT_CONNECTION_TIMEOUT_SEC)
                 val readTimeout =
                     prefs.getInt("read_timeout", Request.DEFAULT_READ_TIMEOUT_SEC)
-                pageViewModel.sendGeminiRequest(uri, connectionTimeout, readTimeout)
+                vm.sendGeminiRequest(uri, connectionTimeout, readTimeout)
             }
             else -> openUnknownScheme(uri)
         }
@@ -157,59 +162,62 @@ class PageFragment : Fragment(), ContentAdapterListener {
 
     private fun handleEvent(event: PageViewModel.Event) {
         Log.d(TAG, "handleEvent: $event")
-        if (!event.handled) {
-            when (event) {
-                is PageViewModel.InputEvent -> {
-                    val editText = EditText(requireContext())
-                    editText.inputType = InputType.TYPE_CLASS_TEXT
-                    val inputView = FrameLayout(requireContext()).apply {
-                        addView(FrameLayout(requireContext()).apply {
-                            addView(editText)
-                            val params = FrameLayout.LayoutParams(
-                                FrameLayout.LayoutParams.MATCH_PARENT,
-                                FrameLayout.LayoutParams.WRAP_CONTENT
-                            )
-                            params.setMargins(resources.getDimensionPixelSize(R.dimen.text_margin))
-                            layoutParams = params
-                        })
-                    }
-                    AlertDialog.Builder(requireContext())
-                        .setMessage(if (event.prompt.isNotEmpty()) event.prompt else "Input required")
-                        .setView(inputView)
-                        .setPositiveButton(android.R.string.ok) { _, _ ->
-                            val newUri =
-                                event.uri.buildUpon().query(editText.text.toString()).build()
-                            openUrl(newUri.toString(), base = currentUrl)
-                        }
-                        .setOnDismissListener { updateState(PageViewModel.State.IDLE) }
-                        .create()
-                        .show()
-                }
-                is PageViewModel.SuccessEvent -> {
-                    currentUrl = event.uri
-                    visitedUrls.add(event.uri)
-                }
-                is PageViewModel.RedirectEvent -> {
-                    openUrl(event.uri, base = currentUrl, redirections = event.redirects)
-                }
-                is PageViewModel.FailureEvent -> {
-                    var message = event.details
-                    if (!event.serverDetails.isNullOrEmpty())
-                        message += "\n\nServer details: ${event.serverDetails}"
-                    if (!isConnectedToNetwork(requireContext()))
-                        message += "\n\nInternet may be inaccessible…"
-                    alert(message, title = event.short)
-                    updateState(PageViewModel.State.IDLE)
-                }
+        if (event.handled)
+            return
+        when (event) {
+            is PageViewModel.InputEvent -> {
+                askForInput(event.prompt, event.uri)
             }
-            event.handled = true
+            is PageViewModel.SuccessEvent -> {
+                currentUrl = event.uri
+                vm.visitedUrls.add(event.uri)
+            }
+            is PageViewModel.RedirectEvent -> {
+                openUrl(event.uri, base = currentUrl, redirections = event.redirects)
+            }
+            is PageViewModel.FailureEvent -> {
+                var message = event.details
+                if (!event.serverDetails.isNullOrEmpty())
+                    message += "\n\nServer details: ${event.serverDetails}"
+                if (!isConnectedToNetwork(requireContext()))
+                    message += "\n\nInternet may be inaccessible…"
+                alert(message, title = event.short)
+                updateState(PageViewModel.State.IDLE)
+            }
         }
+        event.handled = true
     }
 
     private fun alert(message: String, title: String? = null) {
         AlertDialog.Builder(requireContext())
             .setTitle(title ?: getString(R.string.error_alert_title))
             .setMessage(message)
+            .create()
+            .show()
+    }
+
+    private fun askForInput(prompt: String, uri: Uri) {
+        val editText = EditText(requireContext())
+        editText.inputType = InputType.TYPE_CLASS_TEXT
+        val inputView = FrameLayout(requireContext()).apply {
+            addView(FrameLayout(requireContext()).apply {
+                addView(editText)
+                val params = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(resources.getDimensionPixelSize(R.dimen.text_margin))
+                layoutParams = params
+            })
+        }
+        AlertDialog.Builder(requireContext())
+            .setMessage(if (prompt.isNotEmpty()) prompt else "Input required")
+            .setView(inputView)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val newUri = uri.buildUpon().query(editText.text.toString()).build()
+                openUrl(newUri.toString(), base = currentUrl)
+            }
+            .setOnDismissListener { updateState(PageViewModel.State.IDLE) }
             .create()
             .show()
     }
