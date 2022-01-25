@@ -16,15 +16,20 @@ import java.nio.charset.Charset
 @ExperimentalCoroutinesApi
 class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedStateHandle) :
     ViewModel() {
+    /** Currently viewed page URL. */
     var currentUrl: String = ""
-    private var requestJob: Job? = null
+    /** Observable page viewer state. */
     val state: MutableLiveData<State> by lazy { MutableLiveData<State>(State.IDLE) }
-    private var linesList = ArrayList<Line>()
+    /** Observable page viewer lines (backed up by `linesList` but updated less often). */
     val lines: MutableLiveData<List<Line>> by lazy { MutableLiveData<List<Line>>() }
+    /** Observable page viewer latest event. */
     val event: MutableLiveData<Event> by lazy { MutableLiveData<Event>() }
-
     /** A non-saved list of visited URLs. Not an history, just used for going back. */
     val visitedUrls = mutableListOf<String>()
+    /** Latest request job created, stored to cancel it if needed. */
+    private var requestJob: Job? = null
+    /** Lines for the current page. */
+    private var linesList = ArrayList<Line>()
 
     enum class State {
         IDLE, CONNECTING, RECEIVING
