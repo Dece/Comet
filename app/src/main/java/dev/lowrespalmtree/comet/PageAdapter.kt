@@ -148,9 +148,7 @@ class PageAdapter(private val listener: ContentAdapterListener) :
             }
             is ContentBlock.Link -> {
                 val label = if (block.label.isNotBlank()) block.label else block.url
-                val underlinedLabel = SpannableString(label)
-                underlinedLabel.setSpan(UnderlineSpan(), 0, underlinedLabel.length, 0)
-                (holder as ContentViewHolder.Link).binding.textView.text = underlinedLabel
+                (holder as ContentViewHolder.Link).binding.textView.text = label
                 holder.binding.root.setOnClickListener { listener.onLinkClick(block.url) }
             }
             is ContentBlock.Pre ->
