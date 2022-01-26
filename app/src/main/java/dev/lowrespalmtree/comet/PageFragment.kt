@@ -32,14 +32,6 @@ class PageFragment : Fragment(), ContentAdapterListener {
     private lateinit var binding: FragmentPageViewBinding
     private lateinit var adapter: PageAdapter
 
-    /** Property to access and set the current address bar URL value. */
-    private var currentUrl: String
-        get() = vm.currentUrl
-        set(value) {
-            vm.currentUrl = value
-            binding.addressBar.setText(value)
-        }
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -58,7 +50,7 @@ class PageFragment : Fragment(), ContentAdapterListener {
 
         binding.addressBar.setOnEditorActionListener { v, id, _ -> onAddressBarAction(v, id) }
 
-        binding.contentSwipeLayout.setOnRefreshListener { openUrl(currentUrl) }
+        binding.contentSwipeLayout.setOnRefreshListener { openUrl(vm.currentUrl) }
 
         vm.state.observe(viewLifecycleOwner, { updateState(it) })
         vm.lines.observe(viewLifecycleOwner, { updateLines(it) })
@@ -79,7 +71,7 @@ class PageFragment : Fragment(), ContentAdapterListener {
     }
 
     override fun onLinkClick(url: String) {
-        openUrl(url, base = if (currentUrl.isNotEmpty()) currentUrl else null)
+        openUrl(url, base = if (vm.currentUrl.isNotEmpty()) vm.currentUrl else null)
     }
 
     private fun onBackPressed() {
@@ -169,11 +161,12 @@ class PageFragment : Fragment(), ContentAdapterListener {
                 askForInput(event.prompt, event.uri)
             }
             is PageViewModel.SuccessEvent -> {
-                currentUrl = event.uri
+                vm.currentUrl = event.uri
                 vm.visitedUrls.add(event.uri)
+                binding.addressBar.setText(event.uri)
             }
             is PageViewModel.RedirectEvent -> {
-                openUrl(event.uri, base = currentUrl, redirections = event.redirects)
+                openUrl(event.uri, base = vm.currentUrl, redirections = event.redirects)
             }
             is PageViewModel.FailureEvent -> {
                 var message = event.details
@@ -215,7 +208,7 @@ class PageFragment : Fragment(), ContentAdapterListener {
             .setView(inputView)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val newUri = uri.buildUpon().query(editText.text.toString()).build()
-                openUrl(newUri.toString(), base = currentUrl)
+                openUrl(newUri.toString(), base = vm.currentUrl)
             }
             .setOnDismissListener { updateState(PageViewModel.State.IDLE) }
             .create()
