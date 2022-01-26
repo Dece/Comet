@@ -3,6 +3,7 @@ package dev.lowrespalmtree.comet
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
@@ -136,9 +137,13 @@ class PageFragment : Fragment(), ContentAdapterListener {
             PageViewModel.State.IDLE -> {
                 binding.contentProgressBar.hide()
                 binding.contentSwipeLayout.isRefreshing = false
+                binding.addressBar.setText(vm.currentUrl)
+                binding.addressBar.setTypeface(null, Typeface.NORMAL)
             }
             PageViewModel.State.CONNECTING -> {
                 binding.contentProgressBar.show()
+                binding.addressBar.setText(vm.loadingUrl?.toString() ?: "")
+                binding.addressBar.setTypeface(null, Typeface.ITALIC)
             }
             PageViewModel.State.RECEIVING -> {
                 binding.appBarLayout.setExpanded(true, true)

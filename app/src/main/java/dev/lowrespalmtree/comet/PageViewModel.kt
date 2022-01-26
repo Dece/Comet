@@ -18,6 +18,8 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
     ViewModel() {
     /** Currently viewed page URL. */
     var currentUrl: String = ""
+    /** Latest Uri requested using `sendGeminiRequest`. */
+    var loadingUrl: Uri? = null
     /** Observable page viewer state. */
     val state: MutableLiveData<State> by lazy { MutableLiveData<State>(State.IDLE) }
     /** Observable page viewer lines (backed up by `linesList` but updated less often). */
@@ -52,6 +54,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
      */
     fun sendGeminiRequest(uri: Uri, connectionTimeout: Int, readTimeout: Int, redirects: Int = 0) {
         Log.d(TAG, "sendRequest: URI \"$uri\"")
+        loadingUrl = uri
         state.postValue(State.CONNECTING)
         requestJob?.apply { if (isActive) cancel() }
         requestJob = viewModelScope.launch(Dispatchers.IO) {
