@@ -10,6 +10,9 @@
         android:icon="@android:drawable/ic_menu_recent_history"
         android:title="@string/history" />
     <item
+        android:id="@+id/identitiesFragment"
+        android:title="@string/identities" />
+    <item
         android:id="@+id/settingsFragment"
         android:icon="@android:drawable/ic_menu_preferences"
         android:title="@string/settings" />

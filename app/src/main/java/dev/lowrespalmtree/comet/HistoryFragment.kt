@@ -6,9 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -21,8 +22,8 @@ import kotlinx.coroutines.launch
 
 @ExperimentalCoroutinesApi
 class HistoryFragment : Fragment(), HistoryItemAdapterListener {
+    private val vm: HistoryViewModel by viewModels()
     private lateinit var binding: FragmentHistoryListBinding
-    private lateinit var historyViewModel: HistoryViewModel
     private lateinit var adapter: HistoryItemAdapter
 
     override fun onCreateView(
@@ -35,14 +36,13 @@ class HistoryFragment : Fragment(), HistoryItemAdapterListener {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        historyViewModel = ViewModelProvider(this)[HistoryViewModel::class.java]
         adapter = HistoryItemAdapter(this)
         binding.list.layoutManager = LinearLayoutManager(requireContext())
         binding.list.adapter = adapter
 
-        historyViewModel.items.observe(viewLifecycleOwner, { adapter.setItems(it) })
+        vm.items.observe(viewLifecycleOwner, { adapter.setItems(it) })
 
-        historyViewModel.refreshHistory()
+        vm.refreshHistory()
     }
 
     override fun onItemClick(url: String) {
@@ -51,7 +51,9 @@ class HistoryFragment : Fragment(), HistoryItemAdapterListener {
     }
 
     @ExperimentalCoroutinesApi
-    class HistoryViewModel : ViewModel() {
+    class HistoryViewModel(
+        @Suppress("unused") private val savedStateHandle: SavedStateHandle
+    ) : ViewModel() {
         val items: MutableLiveData<List<HistoryEntry>>
                 by lazy { MutableLiveData<List<HistoryEntry>>() }
 

@@ -5,9 +5,9 @@ import androidx.room.*
 object History {
     @Entity
     data class HistoryEntry(
-        @PrimaryKey @ColumnInfo(name = "uri") val uri: String,
-        @ColumnInfo(name = "title") var title: String?,
-        @ColumnInfo(name = "lastVisit") var lastVisit: Long,
+        @PrimaryKey val uri: String,
+        var title: String?,
+        var lastVisit: Long,
     )
 
     @Dao
