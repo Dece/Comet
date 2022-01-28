@@ -73,9 +73,11 @@ class PageAdapter(private val listener: ContentAdapterListener) :
                     }
                     is PreTextLine -> {
                         val lastBlock = blocks.last()
-                        if (lastBlock is ContentBlock.Pre && !lastBlock.closed)
-                            lastBlock.content += line.text + "\n"
-                        else
+                        if (lastBlock is ContentBlock.Pre && !lastBlock.closed) {
+                            if (lastBlock.content.isNotEmpty())
+                                lastBlock.content += "\n"
+                            lastBlock.content += line.text
+                        } else {
                             Log.e(TAG, "setLines: unexpected preformatted line")
                         }
                     }
