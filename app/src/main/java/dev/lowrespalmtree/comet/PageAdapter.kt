@@ -37,7 +37,7 @@ class PageAdapter(private val listener: ContentAdapterListener) :
         class Title(val text: String, val level: Int) : ContentBlock()
         class Link(val url: String, val label: String) : ContentBlock()
         class Pre(val caption: String, var content: String, var closed: Boolean) : ContentBlock()
-        class Blockquote(val text: String) : ContentBlock()
+        class Blockquote(var text: String) : ContentBlock()
         class ListItem(val text: String) : ContentBlock()
     }
 
@@ -57,7 +57,6 @@ class PageAdapter(private val listener: ContentAdapterListener) :
                     is EmptyLine -> blocks.add(ContentBlock.Empty)
                     is ParagraphLine -> blocks.add(ContentBlock.Paragraph(line.text))
                     is LinkLine -> blocks.add(ContentBlock.Link(line.url, line.label))
-                    is BlockquoteLine -> blocks.add(ContentBlock.Blockquote(line.text))
                     is ListItemLine -> blocks.add(ContentBlock.ListItem(line.text))
                     is TitleLine -> blocks.add(ContentBlock.Title(line.text, line.level))
                     is PreFenceLine -> {
@@ -78,6 +77,13 @@ class PageAdapter(private val listener: ContentAdapterListener) :
                             lastBlock.content += line.text + "\n"
                         else
                             Log.e(TAG, "setLines: unexpected preformatted line")
+                        }
+                    }
+                    is BlockquoteLine -> {
+                        if (blocks.isNotEmpty() && blocks.last() is ContentBlock.Blockquote)
+                            (blocks.last() as ContentBlock.Blockquote).text += "\n" + line.text
+                        else
+                            blocks.add(ContentBlock.Blockquote(line.text))
                     }
                 }
                 currentLine++

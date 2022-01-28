@@ -61,8 +61,7 @@ private fun parseLine(line: CharBuffer, isPreformatted: Boolean): Line =
         line.startsWith("##") -> TitleLine(2, getCharsFrom(line, 2))
         line.startsWith("#") -> TitleLine(1, getCharsFrom(line, 1))
         line.startsWith("* ") -> ListItemLine(getCharsFrom(line, 2))
-        line.startsWith(">") -> getCharsFrom(line, 1)  // eh empty lines in quotes…
-            .run { if (isBlank()) EmptyLine() else BlockquoteLine(this) }
+        line.startsWith(">") -> BlockquoteLine(getCharsFrom(line, 1))
         line.startsWith("=>") -> getCharsFrom(line, 2)
             .split(" ", "\t", limit = 2)
             .run { LinkLine(get(0), if (size == 2) get(1).trimStart() else "") }
