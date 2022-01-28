@@ -14,7 +14,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.History.HistoryEntry
-import dev.lowrespalmtree.comet.HistoryItemAdapter.HistoryItemAdapterListener
+import dev.lowrespalmtree.comet.HistoryAdapter.HistoryItemAdapterListener
 import dev.lowrespalmtree.comet.databinding.FragmentHistoryListBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 class HistoryFragment : Fragment(), HistoryItemAdapterListener {
     private val vm: HistoryViewModel by viewModels()
     private lateinit var binding: FragmentHistoryListBinding
-    private lateinit var adapter: HistoryItemAdapter
+    private lateinit var adapter: HistoryAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -36,7 +36,7 @@ class HistoryFragment : Fragment(), HistoryItemAdapterListener {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        adapter = HistoryItemAdapter(this)
+        adapter = HistoryAdapter(this)
         binding.list.layoutManager = LinearLayoutManager(requireContext())
         binding.list.adapter = adapter
 

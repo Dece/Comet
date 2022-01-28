@@ -8,8 +8,8 @@ import androidx.recyclerview.widget.RecyclerView
 import dev.lowrespalmtree.comet.History.HistoryEntry
 import dev.lowrespalmtree.comet.databinding.FragmentHistoryItemBinding
 
-class HistoryItemAdapter(private val listener: HistoryItemAdapterListener) :
-    RecyclerView.Adapter<HistoryItemAdapter.ViewHolder>() {
+class HistoryAdapter(private val listener: HistoryItemAdapterListener) :
+    RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
     private var items = listOf<HistoryEntry>()
 
     interface HistoryItemAdapterListener {

@@ -1,8 +1,6 @@
 package dev.lowrespalmtree.comet
 
 import android.annotation.SuppressLint
-import android.text.SpannableString
-import android.text.style.UnderlineSpan
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
