@@ -11,6 +11,8 @@
     <color name="second_accent">#6c71c4</color>
     <color name="second_accent_dark">#073642</color>
     <color name="link">#268bd2</color>
+    <color name="url_bar">#002b36</color>
+    <color name="url_bar_loading">#fdf6e3</color>
     <!--
     Based on Solarized
     SOLARIZED HEX     16/8 TERMCOL  XTERM/HEX   L*A*B      RGB         HSB

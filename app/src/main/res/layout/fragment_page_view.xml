@@ -30,6 +30,7 @@
                 android:importantForAutofill="no"
                 android:inputType="textUri"
                 android:text=""
+                android:textColor="@color/url_bar"
                 tools:ignore="TextContrastCheck" />
 
         </Toolbar>

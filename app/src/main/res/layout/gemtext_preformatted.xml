@@ -12,8 +12,6 @@
         android:textColor="@color/text"
         android:fontFamily="@font/preformatted"
         android:typeface="monospace"
-        android:paddingStart="16dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp" />
+        android:padding="4dp"
+        android:background="@color/background_emph" />
 </HorizontalScrollView>

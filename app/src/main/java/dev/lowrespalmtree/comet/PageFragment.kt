@@ -138,15 +138,15 @@ class PageFragment : Fragment(), ContentAdapterListener {
                 binding.contentProgressBar.hide()
                 binding.contentSwipeLayout.isRefreshing = false
                 binding.addressBar.setText(vm.currentUrl)
-                binding.addressBar.setTypeface(null, Typeface.NORMAL)
+                binding.addressBar.setTextColor(resources.getColor(R.color.url_bar, null))
             }
             PageViewModel.State.CONNECTING -> {
+                binding.appBarLayout.setExpanded(true, true)
                 binding.contentProgressBar.show()
                 binding.addressBar.setText(vm.loadingUrl?.toString() ?: "")
-                binding.addressBar.setTypeface(null, Typeface.ITALIC)
+                binding.addressBar.setTextColor(resources.getColor(R.color.url_bar_loading, null))
             }
             PageViewModel.State.RECEIVING -> {
-                binding.appBarLayout.setExpanded(true, true)
                 binding.contentSwipeLayout.isRefreshing = false
             }
         }
