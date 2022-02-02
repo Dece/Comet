@@ -31,7 +31,16 @@
     <fragment
         android:id="@+id/identitiesFragment"
         android:name="dev.lowrespalmtree.comet.IdentitiesFragment"
-        android:label="IdentitiesFragment" />
+        android:label="IdentitiesFragment" >
+        <action
+            android:id="@+id/action_identitiesFragment_to_identityEditorFragment"
+            app:destination="@id/identityEditorFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/identityEditorFragment"
+        android:name="dev.lowrespalmtree.comet.IdentityEditorFragment"
+        android:label="IdentityEditorFragment" />
 
     <fragment
         android:id="@+id/settingsFragment"
@@ -44,4 +53,5 @@
         app:exitAnim="@anim/nav_default_exit_anim"
         app:popEnterAnim="@anim/nav_default_pop_enter_anim"
         app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+
 </navigation>

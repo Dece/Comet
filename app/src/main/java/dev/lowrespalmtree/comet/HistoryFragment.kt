@@ -12,16 +12,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.History.HistoryEntry
-import dev.lowrespalmtree.comet.HistoryAdapter.HistoryItemAdapterListener
 import dev.lowrespalmtree.comet.databinding.FragmentHistoryListBinding
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 
-@ExperimentalCoroutinesApi
-class HistoryFragment : Fragment(), HistoryItemAdapterListener {
+class HistoryFragment : Fragment(), HistoryAdapter.Listener {
     private val vm: HistoryViewModel by viewModels()
     private lateinit var binding: FragmentHistoryListBinding
     private lateinit var adapter: HistoryAdapter
@@ -36,8 +34,10 @@ class HistoryFragment : Fragment(), HistoryItemAdapterListener {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val lm = LinearLayoutManager(requireContext())
+        binding.list.layoutManager = lm
+        binding.list.addItemDecoration(DividerItemDecoration(context, lm.orientation))
         adapter = HistoryAdapter(this)
-        binding.list.layoutManager = LinearLayoutManager(requireContext())
         binding.list.adapter = adapter
 
         vm.items.observe(viewLifecycleOwner) { adapter.setItems(it) }
@@ -50,7 +50,6 @@ class HistoryFragment : Fragment(), HistoryItemAdapterListener {
         findNavController().navigate(R.id.action_global_pageFragment, bundle)
     }
 
-    @ExperimentalCoroutinesApi
     class HistoryViewModel(
         @Suppress("unused") private val savedStateHandle: SavedStateHandle
     ) : ViewModel() {

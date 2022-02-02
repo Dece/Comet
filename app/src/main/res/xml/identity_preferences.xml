@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:persistent="false">
+
+    <EditTextPreference
+        android:key="name"
+        android:title="@string/identity_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <Preference
+        android:key="key_setup"
+        android:title="@string/identity_key_setup" />
+
+</androidx.preference.PreferenceScreen>

@@ -5,6 +5,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import dev.lowrespalmtree.comet.utils.toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

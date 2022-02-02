@@ -13,7 +13,6 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 
-@ExperimentalCoroutinesApi
 class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedStateHandle) :
     ViewModel() {
     /** Currently viewed page URL. */
@@ -52,6 +51,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
      *
      * The URI must be valid, absolute and with a gemini scheme.
      */
+    @ExperimentalCoroutinesApi
     fun sendGeminiRequest(uri: Uri, connectionTimeout: Int, readTimeout: Int, redirects: Int = 0) {
         Log.d(TAG, "sendRequest: URI \"$uri\"")
         loadingUrl = uri
@@ -110,6 +110,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
         event.postValue(InputEvent(uri, response.meta))
     }
 
+    @ExperimentalCoroutinesApi
     private suspend fun handleSuccessResponse(response: Response, uri: Uri) {
         state.postValue(State.RECEIVING)
 

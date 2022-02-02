@@ -22,12 +22,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import dev.lowrespalmtree.comet.PageAdapter.ContentAdapterListener
 import dev.lowrespalmtree.comet.databinding.FragmentPageViewBinding
+import dev.lowrespalmtree.comet.utils.isConnectedToNetwork
+import dev.lowrespalmtree.comet.utils.joinUrls
+import dev.lowrespalmtree.comet.utils.toGeminiUri
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
-class PageFragment : Fragment(), ContentAdapterListener {
+class PageFragment : Fragment(), PageAdapter.Listener {
     private val vm: PageViewModel by viewModels()
     private lateinit var binding: FragmentPageViewBinding
     private lateinit var adapter: PageAdapter
@@ -44,8 +46,8 @@ class PageFragment : Fragment(), ContentAdapterListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         Log.d(TAG, "onViewCreated")
-        adapter = PageAdapter(this)
         binding.contentRecycler.layoutManager = LinearLayoutManager(requireContext())
+        adapter = PageAdapter(this)
         binding.contentRecycler.adapter = adapter
 
         binding.addressBar.setOnEditorActionListener { v, id, _ -> onAddressBarAction(v, id) }

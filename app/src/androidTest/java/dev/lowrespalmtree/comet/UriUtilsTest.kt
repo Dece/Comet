@@ -13,27 +13,36 @@ class UriUtilsTest {
     fun joinUrls() {
         assertEquals(
             "gemini://dece.space/some-file.gmi",
-            joinUrls("gemini://dece.space/", "some-file.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/", "some-file.gmi").toString()
         )
         assertEquals(
             "gemini://dece.space/some-file.gmi",
-            joinUrls("gemini://dece.space/", "./some-file.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/", "./some-file.gmi").toString()
         )
         assertEquals(
             "gemini://dece.space/some-file.gmi",
-            joinUrls("gemini://dece.space/dir1", "/some-file.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/dir1", "/some-file.gmi").toString()
         )
         assertEquals(
             "gemini://dece.space/dir1/other-file.gmi",
-            joinUrls("gemini://dece.space/dir1/file.gmi", "other-file.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls(
+                "gemini://dece.space/dir1/file.gmi",
+                "other-file.gmi"
+            ).toString()
         )
         assertEquals(
             "gemini://dece.space/top-level.gmi",
-            joinUrls("gemini://dece.space/dir1/file.gmi", "../top-level.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls(
+                "gemini://dece.space/dir1/file.gmi",
+                "../top-level.gmi"
+            ).toString()
         )
         assertEquals(
             "s://hard/test/b/d/a.gmi",
-            joinUrls("s://hard/dir/a", "./../test/b/c/../d/e/f/../.././a.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls(
+                "s://hard/dir/a",
+                "./../test/b/c/../d/e/f/../.././a.gmi"
+            ).toString()
         )
     }
 
@@ -49,28 +58,28 @@ class UriUtilsTest {
             Pair("mid/content=5/../6", "mid/6"),
             Pair("../../../../g", "g")
         ).forEach { (path, expected) ->
-            assertEquals(expected, removeDotSegments(path))
+            assertEquals(expected, dev.lowrespalmtree.comet.utils.removeDotSegments(path))
         }
     }
 
     @Test
     fun removeLastSegment() {
-        assertEquals("", removeLastSegment(""))
-        assertEquals("", removeLastSegment("/"))
-        assertEquals("", removeLastSegment("/a"))
-        assertEquals("/a", removeLastSegment("/a/"))
-        assertEquals("/a", removeLastSegment("/a/b"))
-        assertEquals("/a/b/c", removeLastSegment("/a/b/c/d"))
-        assertEquals("//", removeLastSegment("///"))
+        assertEquals("", dev.lowrespalmtree.comet.utils.removeLastSegment(""))
+        assertEquals("", dev.lowrespalmtree.comet.utils.removeLastSegment("/"))
+        assertEquals("", dev.lowrespalmtree.comet.utils.removeLastSegment("/a"))
+        assertEquals("/a", dev.lowrespalmtree.comet.utils.removeLastSegment("/a/"))
+        assertEquals("/a", dev.lowrespalmtree.comet.utils.removeLastSegment("/a/b"))
+        assertEquals("/a/b/c", dev.lowrespalmtree.comet.utils.removeLastSegment("/a/b/c/d"))
+        assertEquals("//", dev.lowrespalmtree.comet.utils.removeLastSegment("///"))
     }
 
     @Test
     fun popFirstSegment() {
-        assertEquals(Pair("", ""), popFirstSegment(""))
-        assertEquals(Pair("a", ""), popFirstSegment("a"))
-        assertEquals(Pair("/a", ""), popFirstSegment("/a"))
-        assertEquals(Pair("/a", "/"), popFirstSegment("/a/"))
-        assertEquals(Pair("/a", "/b"), popFirstSegment("/a/b"))
-        assertEquals(Pair("a", "/b"), popFirstSegment("a/b"))
+        assertEquals(Pair("", ""), dev.lowrespalmtree.comet.utils.popFirstSegment(""))
+        assertEquals(Pair("a", ""), dev.lowrespalmtree.comet.utils.popFirstSegment("a"))
+        assertEquals(Pair("/a", ""), dev.lowrespalmtree.comet.utils.popFirstSegment("/a"))
+        assertEquals(Pair("/a", "/"), dev.lowrespalmtree.comet.utils.popFirstSegment("/a/"))
+        assertEquals(Pair("/a", "/b"), dev.lowrespalmtree.comet.utils.popFirstSegment("/a/b"))
+        assertEquals(Pair("a", "/b"), dev.lowrespalmtree.comet.utils.popFirstSegment("a/b"))
     }
 }

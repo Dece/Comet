@@ -7,12 +7,13 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import dev.lowrespalmtree.comet.History.HistoryEntry
 import dev.lowrespalmtree.comet.databinding.FragmentHistoryItemBinding
+import dev.lowrespalmtree.comet.utils.getFancySelectBgRes
 
-class HistoryAdapter(private val listener: HistoryItemAdapterListener) :
+class HistoryAdapter(private val listener: Listener) :
     RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
     private var items = listOf<HistoryEntry>()
 
-    interface HistoryItemAdapterListener {
+    interface Listener {
         fun onItemClick(url: String)
     }
 
@@ -31,7 +32,7 @@ class HistoryAdapter(private val listener: HistoryItemAdapterListener) :
         holder.binding.titleText.visibility =
             if (item.title.isNullOrBlank()) View.GONE else View.VISIBLE
         holder.binding.titleText.text = item.title ?: ""
-        holder.binding.card.setOnClickListener { listener.onItemClick(item.uri) }
+        holder.binding.container.setOnClickListener { listener.onItemClick(item.uri) }
     }
 
     override fun getItemCount(): Int = items.size
@@ -43,5 +44,9 @@ class HistoryAdapter(private val listener: HistoryItemAdapterListener) :
     }
 
     inner class ViewHolder(val binding: FragmentHistoryItemBinding) :
-        RecyclerView.ViewHolder(binding.root)
+        RecyclerView.ViewHolder(binding.root) {
+        init {
+            itemView.setBackgroundResource(getFancySelectBgRes(itemView.context))
+        }
+    }
 }

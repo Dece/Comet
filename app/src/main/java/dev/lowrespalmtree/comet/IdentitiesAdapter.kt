@@ -1,24 +1,49 @@
 package dev.lowrespalmtree.comet
 
+import android.annotation.SuppressLint
+import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import dev.lowrespalmtree.comet.Identities.Identity
 import dev.lowrespalmtree.comet.databinding.FragmentIdentityBinding
+import dev.lowrespalmtree.comet.utils.getFancySelectBgRes
 
-class IdentitiesAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+class IdentitiesAdapter(private val listener: Listener) :
+    RecyclerView.Adapter<IdentitiesAdapter.ViewHolder>() {
     private var identities = listOf<Identity>()
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryAdapter.ViewHolder {
-        TODO("Not yet implemented")
+    interface Listener {
+        fun onIdentityClick(identity: Identity)
     }
 
-    override fun onBindViewHolder(holder: HistoryAdapter.ViewHolder, position: Int) {
-        TODO("Not yet implemented")
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
+        ViewHolder(
+            FragmentIdentityBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
+        )
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val item = identities[position]
+        holder.binding.labelText.text = item.name.orEmpty()
+        holder.binding.keyText.text = item.key
+        holder.binding.container.setOnClickListener { listener.onIdentityClick(item) }
     }
 
-    override fun getItemCount(): Int {
-        TODO("Not yet implemented")
+    override fun getItemCount(): Int = identities.size
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun setIdentities(newIdentities: List<Identity>) {
+        identities = newIdentities.toList()
+        notifyDataSetChanged()
     }
 
-    inner class ViewHolder(val binding: FragmentIdentityBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class ViewHolder(val binding: FragmentIdentityBinding) :
+        RecyclerView.ViewHolder(binding.root) {
+        init {
+            itemView.setBackgroundResource(getFancySelectBgRes(itemView.context))
+        }
+    }
 }

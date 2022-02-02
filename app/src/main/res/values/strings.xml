@@ -31,6 +31,14 @@
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="identities">Identities</string>
+    <!-- Preference Titles -->
+    <string name="messages_header">Messages</string>
+    <string name="sync_header">Sync</string>
+    <string name="identity_key_setup">Setup key pair for this identity</string>
+    <string name="identity_name">Label</string>
+    <string name="generating_keypair">Generating client certificate…</string>
+    <string name="identity_alias_title">Keystore reference</string>
+    <string name="edit_identity">Edit identity</string>
 
 
 </resources>

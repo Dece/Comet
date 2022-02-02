@@ -1,4 +1,4 @@
-package dev.lowrespalmtree.comet
+package dev.lowrespalmtree.comet.utils
 
 import android.content.Context
 import android.net.ConnectivityManager
