@@ -52,9 +52,9 @@ class PageFragment : Fragment(), ContentAdapterListener {
 
         binding.contentSwipeLayout.setOnRefreshListener { openUrl(vm.currentUrl) }
 
-        vm.state.observe(viewLifecycleOwner, { updateState(it) })
-        vm.lines.observe(viewLifecycleOwner, { updateLines(it) })
-        vm.event.observe(viewLifecycleOwner, { handleEvent(it) })
+        vm.state.observe(viewLifecycleOwner) { updateState(it) }
+        vm.lines.observe(viewLifecycleOwner) { updateLines(it) }
+        vm.event.observe(viewLifecycleOwner) { handleEvent(it) }
 
         activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner) { onBackPressed() }
 
@@ -71,7 +71,7 @@ class PageFragment : Fragment(), ContentAdapterListener {
     }
 
     override fun onLinkClick(url: String) {
-        openUrl(url, base = if (vm.currentUrl.isNotEmpty()) vm.currentUrl else null)
+        openUrl(url, base = vm.currentUrl.ifEmpty { null })
     }
 
     private fun onBackPressed() {
@@ -208,7 +208,7 @@ class PageFragment : Fragment(), ContentAdapterListener {
             })
         }
         AlertDialog.Builder(requireContext())
-            .setMessage(if (prompt.isNotEmpty()) prompt else "Input required")
+            .setMessage(prompt.ifEmpty { "Input required" })
             .setView(inputView)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val newUri = uri.buildUpon().query(editText.text.toString()).build()

@@ -40,7 +40,7 @@ class HistoryFragment : Fragment(), HistoryItemAdapterListener {
         binding.list.layoutManager = LinearLayoutManager(requireContext())
         binding.list.adapter = adapter
 
-        vm.items.observe(viewLifecycleOwner, { adapter.setItems(it) })
+        vm.items.observe(viewLifecycleOwner) { adapter.setItems(it) }
 
         vm.refreshHistory()
     }

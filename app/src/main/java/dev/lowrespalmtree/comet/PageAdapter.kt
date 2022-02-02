@@ -153,7 +153,7 @@ class PageAdapter(private val listener: ContentAdapterListener) :
                 }
             }
             is ContentBlock.Link -> {
-                val label = if (block.label.isNotBlank()) block.label else block.url
+                val label = block.label.ifBlank { block.url }
                 (holder as ContentViewHolder.Link).binding.textView.text = label
                 holder.binding.root.setOnClickListener { listener.onLinkClick(block.url) }
             }
