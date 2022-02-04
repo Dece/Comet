@@ -72,7 +72,6 @@ object Identities {
 
     private fun deleteClientCert(alias: String) {
         val keyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
-        Log.i(TAG, keyStore.aliases().toList().joinToString { it })
         if (keyStore.containsAlias(alias)) {
             keyStore.deleteEntry(alias)
             Log.i(TAG, "deleteClientCert: deleted entry with alias \"$alias\"")
