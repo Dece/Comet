@@ -16,16 +16,8 @@ object Identities {
         val key: String,
         /** Label for this identity. */
         var name: String?,
-    )
-
-    @Entity
-    data class IdentityUsage(
-        /** ID. */
-        @PrimaryKey(autoGenerate = true) val id: Int,
-        /** URL path where an identity can be used. */
-        val uri: String,
-        /** ID of the Identity to use. */
-        val identityId: Int
+        /** URL paths configured to use this identity. */
+        var urls: UrlList
     )
 
     @Dao
@@ -42,15 +34,12 @@ object Identities {
         @Update
         suspend fun update(vararg identities: Identity)
 
-        @Query("SELECT * FROM IdentityUsage WHERE :identityId = identityId")
-        suspend fun getUsagesFor(identityId: Int): List<IdentityUsage>
-
         @Delete
         suspend fun delete(vararg identities: Identity)
     }
 
     suspend fun insert(key: String, name: String? = null): Long =
-        Database.INSTANCE.identityDao().insert(Identity(0, key, name))
+        Database.INSTANCE.identityDao().insert(Identity(0, key, name, arrayListOf()))
 
     suspend fun get(id: Long): Identity? =
         Database.INSTANCE.identityDao().get(id)
