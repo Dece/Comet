@@ -82,27 +82,39 @@ class IdentitiesFragment : Fragment(), IdentitiesAdapter.Listener, IdentityEditD
         vm.saveIdentity(identity)
     }
 
-    private fun openNewIdentityEditor() {
-        toast(requireContext(), R.string.generating_keypair)
-        vm.newIdentity.observe(viewLifecycleOwner) { identity ->
-            if (identity == null)
-                return@observe
-            vm.newIdentity.removeObservers(viewLifecycleOwner)
-            vm.newIdentity.value = null
-            IdentityDialog(requireContext(), identity, this).show()
-        }
-        vm.createNewIdentity()
+    /**
+     * Open the new identity wizard.
+     *
+     * There is a first dialog to ask the user about the desired subject common name,
+     * then the certificate is generated and the edition dialog is opened.
+     */
+    private fun openIdentityWizard() {
+        InputDialog(requireContext(), getString(R.string.input_common_name))
+            .show(
+                onOk = { text ->
+                    toast(requireContext(), R.string.generating_keypair)
+                    vm.newIdentity.observe(viewLifecycleOwner) { identity ->
+                        if (identity == null)
+                            return@observe
+                        vm.newIdentity.removeObservers(viewLifecycleOwner)
+                        vm.newIdentity.value = null
+                        IdentityEditDialog(requireContext(), identity, this).show()
+                    }
+                    vm.createNewIdentity(text)
+                },
+                onDismiss = {}
+            )
     }
 
     class IdentitiesViewModel : ViewModel() {
         val identities: MutableLiveData<List<Identity>> by lazy { MutableLiveData<List<Identity>>() }
         val newIdentity: MutableLiveData<Identity> by lazy { MutableLiveData<Identity>() }
 
-        fun createNewIdentity() {
+        fun createNewIdentity(commonName: String) {
             viewModelScope.launch(Dispatchers.IO) {
                 val alias = "identity-${UUID.randomUUID()}"
-                Identities.generateClientCert(alias)
-                val newIdentityId = Identities.insert(alias)
+                Identities.generateClientCert(alias, commonName)
+                val newIdentityId = Identities.insert(alias, commonName)
                 newIdentity.postValue(Identities.get(newIdentityId))
             }
                 .invokeOnCompletion { refreshIdentities() }

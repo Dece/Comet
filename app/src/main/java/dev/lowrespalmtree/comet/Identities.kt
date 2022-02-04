@@ -4,8 +4,10 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.room.*
+import java.lang.IllegalArgumentException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
+import javax.security.auth.x500.X500Principal
 
 object Identities {
     @Entity
@@ -58,11 +60,20 @@ object Identities {
         Database.INSTANCE.identityDao().delete(*identities)
     }
 
-    fun generateClientCert(alias: String) {
+    fun generateClientCert(alias: String, commonName: String) {
         val algo = KeyProperties.KEY_ALGORITHM_RSA
         val kpg = KeyPairGenerator.getInstance(algo, "AndroidKeyStore")
         val purposes = KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
         val spec = KeyGenParameterSpec.Builder(alias, purposes)
+            .apply {
+                if (commonName.isNotEmpty()) {
+                    try {
+                        setCertificateSubject(X500Principal("CN=$commonName"))
+                    } catch (e: IllegalArgumentException) {
+                        Log.e(TAG, "generateClientCert: bad common name: ${e.message}")
+                    }
+                }
+            }
             .setDigests(KeyProperties.DIGEST_SHA256)
             .build()
         kpg.initialize(spec)
