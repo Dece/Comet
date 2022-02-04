@@ -9,4 +9,9 @@
         <item name="android:paddingBottom">4dp</item>
         <item name="android:textIsSelectable">true</item>
     </style>
+    <style name="CometLink" parent="CometText">
+        <item name="android:textColor">@color/link</item>
+        <item name="android:textIsSelectable">false</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+    </style>
 </resources>
