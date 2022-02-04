@@ -2,6 +2,7 @@ package dev.lowrespalmtree.comet
 
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import dev.lowrespalmtree.comet.Identities.Identity
@@ -14,6 +15,7 @@ class IdentitiesAdapter(private val listener: Listener) :
 
     interface Listener {
         fun onIdentityClick(identity: Identity)
+        fun onIdentityLongClick(identity: Identity, view: View)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
@@ -29,7 +31,13 @@ class IdentitiesAdapter(private val listener: Listener) :
         val item = identities[position]
         holder.binding.labelText.text = item.name.orEmpty()
         holder.binding.keyText.text = item.key
-        holder.binding.container.setOnClickListener { listener.onIdentityClick(item) }
+        holder.binding.container.setOnClickListener {
+            listener.onIdentityClick(item)
+        }
+        holder.binding.container.setOnLongClickListener {
+            listener.onIdentityLongClick(item, holder.itemView);
+            true
+        }
     }
 
     override fun getItemCount(): Int = identities.size

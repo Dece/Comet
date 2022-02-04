@@ -18,7 +18,7 @@ class IdentityDialog(
 
     fun show() {
         binding = DialogIdentityBinding.inflate(LayoutInflater.from(context))
-        binding.labelInput.setText(identity.name)
+        binding.labelInput.setText(identity.name.orEmpty())
         binding.aliasText.text = identity.key
         AlertDialog.Builder(context)
             .setTitle(R.string.edit_identity)

@@ -5,6 +5,7 @@ import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.room.*
 import java.security.KeyPairGenerator
+import java.security.KeyStore
 
 object Identities {
     @Entity
@@ -43,6 +44,9 @@ object Identities {
 
         @Query("SELECT * FROM IdentityUsage WHERE :identityId = identityId")
         suspend fun getUsagesFor(identityId: Int): List<IdentityUsage>
+
+        @Delete
+        suspend fun delete(vararg identities: Identity)
     }
 
     suspend fun insert(key: String, name: String? = null): Long =
@@ -57,6 +61,14 @@ object Identities {
     suspend fun update(vararg identities: Identity) =
         Database.INSTANCE.identityDao().update(*identities)
 
+    suspend fun delete(vararg identities: Identity) {
+        for (identity in identities) {
+            if (identity.key.isNotEmpty())
+                deleteClientCert(identity.key)
+        }
+        Database.INSTANCE.identityDao().delete(*identities)
+    }
+
     fun generateClientCert(alias: String) {
         val algo = KeyProperties.KEY_ALGORITHM_RSA
         val kpg = KeyPairGenerator.getInstance(algo, "AndroidKeyStore")
@@ -67,6 +79,17 @@ object Identities {
         kpg.initialize(spec)
         kpg.generateKeyPair()
         Log.i(TAG, "generateClientCert: key pair with alias \"$alias\" has been generated")
+    }
+
+    private fun deleteClientCert(alias: String) {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
+        Log.i(TAG, keyStore.aliases().toList().joinToString { it })
+        if (keyStore.containsAlias(alias)) {
+            keyStore.deleteEntry(alias)
+            Log.i(TAG, "deleteClientCert: deleted entry with alias \"$alias\"")
+        } else {
+            Log.i(TAG, "deleteClientCert: no such alias \"$alias\"")
+        }
     }
 
     private const val TAG = "Identities"

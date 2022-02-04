@@ -14,7 +14,7 @@
     <color name="url_bar">#002b36</color>
     <color name="url_bar_loading">#fdf6e3</color>
     <!--
-    Based on Solarized
+    Based on Solarized - https://ethanschoonover.com/solarized/
     SOLARIZED HEX     16/8 TERMCOL  XTERM/HEX   L*A*B      RGB         HSB
     base03    #002b36  8/4 brblack  234 #1c1c1c 15 -12 -12   0  43  54 193 100  21
     base02    #073642  0/4 black    235 #262626 20 -12 -12   7  54  66 192  90  26
