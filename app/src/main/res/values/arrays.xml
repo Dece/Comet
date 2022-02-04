@@ -1,12 +1,11 @@
 <resources>
-    <!-- Reply Preference -->
-    <string-array name="reply_entries">
-        <item>Reply</item>
-        <item>Reply to all</item>
+    <string-array name="tls_version_entries">
+        <item>TLS v1.3</item>
+        <item>TLS v1.2</item>
     </string-array>
 
-    <string-array name="reply_values">
-        <item>reply</item>
-        <item>reply_all</item>
+    <string-array name="tls_version_values">
+        <item>TLSv1.3</item>
+        <item>TLSv1.2</item>
     </string-array>
 </resources>

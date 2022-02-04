@@ -52,7 +52,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
      * The URI must be valid, absolute and with a gemini scheme.
      */
     @ExperimentalCoroutinesApi
-    fun sendGeminiRequest(uri: Uri, connectionTimeout: Int, readTimeout: Int, redirects: Int = 0) {
+    fun sendGeminiRequest(uri: Uri, protocol: String, connectionTimeout: Int, readTimeout: Int, redirects: Int = 0) {
         Log.d(TAG, "sendRequest: URI \"$uri\"")
         loadingUrl = uri
         state.postValue(State.CONNECTING)
@@ -60,7 +60,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
         requestJob = viewModelScope.launch(Dispatchers.IO) {
             val response = try {
                 val request = Request(uri)
-                val socket = request.connect(connectionTimeout, readTimeout)
+                val socket = request.connect(protocol, connectionTimeout, readTimeout)
                 val channel = request.proceed(socket, this)
                 Response.from(channel, viewModelScope)
             } catch (e: Exception) {
@@ -71,7 +71,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
                 signalError(
                     when (e) {
                         is UnknownHostException -> "Unknown host \"${uri.authority}\"."
-                        is ConnectException -> "Can't connect to this server: ${e.localizedMessage}."
+                        is ConnectException -> "Can't connect to this server: ${e.message}."
                         is SocketTimeoutException -> "Connection timed out."
                         is CancellationException -> "Connection cancelled: ${e.message}."
                         else -> "Oops, something failed!"

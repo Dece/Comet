@@ -13,17 +13,17 @@
             app:key="home_set"
             app:title="@string/pref_home_set" />
 
-        <ListPreference
-            app:defaultValue="reply"
-            app:entries="@array/reply_entries"
-            app:entryValues="@array/reply_values"
-            app:key="reply"
-            app:title="@string/reply_title"
-            app:useSimpleSummaryProvider="true" />
-
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/pref_protocol_header">
+
+        <DropDownPreference
+            app:key="tls_version"
+            app:entries="@array/tls_version_entries"
+            app:entryValues="@array/tls_version_values"
+            app:defaultValue="TLSv1.3"
+            app:useSimpleSummaryProvider="true"
+            app:title="@string/tls_version" />
 
         <SeekBarPreference
             android:defaultValue="10"

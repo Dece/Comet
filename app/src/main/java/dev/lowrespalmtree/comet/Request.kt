@@ -17,9 +17,9 @@ import javax.net.ssl.X509TrustManager
 class Request(private val uri: Uri) {
     private val port get() = if (uri.port > 0) uri.port else 1965
 
-    fun connect(connectionTimeout: Int, readTimeout: Int): SSLSocket {
-        Log.d(TAG, "connect")
-        val context = SSLContext.getInstance("TLSv1.2")
+    fun connect(protocol: String, connectionTimeout: Int, readTimeout: Int): SSLSocket {
+        Log.d(TAG, "connect: $protocol, c.to. $connectionTimeout, r.to. $readTimeout")
+        val context = SSLContext.getInstance(protocol)
         context.init(null, arrayOf(TrustManager()), null)
         val socket = context.socketFactory.createSocket() as SSLSocket
         socket.soTimeout = readTimeout * 1000
@@ -70,6 +70,7 @@ class Request(private val uri: Uri) {
 
     companion object {
         private const val TAG = "Request"
+        const val DEFAULT_TLS_VERSION = "TLSv1.3"
         const val DEFAULT_CONNECTION_TIMEOUT_SEC = 10
         const val DEFAULT_READ_TIMEOUT_SEC = 10
     }
