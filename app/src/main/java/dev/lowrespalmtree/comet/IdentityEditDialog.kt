@@ -5,7 +5,7 @@ import android.content.Context
 import android.view.LayoutInflater
 import dev.lowrespalmtree.comet.databinding.DialogIdentityBinding
 
-class IdentityDialog(
+class IdentityEditDialog(
     private val context: Context,
     private val identity: Identities.Identity,
     private val listener: Listener

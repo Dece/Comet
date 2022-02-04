@@ -35,7 +35,7 @@ class IdentitiesAdapter(private val listener: Listener) :
             listener.onIdentityClick(item)
         }
         holder.binding.container.setOnLongClickListener {
-            listener.onIdentityLongClick(item, holder.itemView);
+            listener.onIdentityLongClick(item, holder.itemView)
             true
         }
     }

@@ -10,7 +10,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/identity_name"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+        style="@style/CometLabel" />
 
     <EditText
         android:id="@+id/labelInput"
@@ -28,7 +28,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/identity_usages"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+        style="@style/CometLabel" />
 
     <EditText
         android:id="@+id/urlInput"
@@ -46,7 +46,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/identity_alias_title"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+        style="@style/CometLabel" />
 
     <TextView
         android:id="@+id/aliasText"

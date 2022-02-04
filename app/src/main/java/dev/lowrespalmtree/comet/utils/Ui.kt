@@ -28,6 +28,7 @@ fun confirm(context: Context, @StringRes prompt: Int, onOk: () -> Unit) {
         .setTitle(R.string.confirm)
         .setView(binding.root)
         .setPositiveButton(android.R.string.ok) { _, _ -> onOk() }
+        .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
         .create()
         .show()
 }

@@ -20,7 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
 
-class IdentitiesFragment : Fragment(), IdentitiesAdapter.Listener, IdentityDialog.Listener {
+class IdentitiesFragment : Fragment(), IdentitiesAdapter.Listener, IdentityEditDialog.Listener {
     private val vm: IdentitiesViewModel by viewModels()
     private lateinit var binding: FragmentIdentitiesBinding
     private lateinit var adapter: IdentitiesAdapter
@@ -41,7 +41,7 @@ class IdentitiesFragment : Fragment(), IdentitiesAdapter.Listener, IdentityDialo
         adapter = IdentitiesAdapter(this)
         binding.list.adapter = adapter
 
-        binding.floatingActionButton.setOnClickListener { openNewIdentityEditor() }
+        binding.floatingActionButton.setOnClickListener { openIdentityWizard() }
 
         vm.identities.observe(viewLifecycleOwner) { adapter.setIdentities(it) }
 
@@ -49,7 +49,7 @@ class IdentitiesFragment : Fragment(), IdentitiesAdapter.Listener, IdentityDialo
     }
 
     override fun onIdentityClick(identity: Identity) {
-        IdentityDialog(requireContext(), identity, this).show()
+        IdentityEditDialog(requireContext(), identity, this).show()
     }
 
     override fun onIdentityLongClick(identity: Identity, view: View) {
@@ -59,7 +59,7 @@ class IdentitiesFragment : Fragment(), IdentitiesAdapter.Listener, IdentityDialo
                 setOnMenuItemClickListener { item ->
                     when (item.itemId) {
                         R.id.item_edit -> {
-                            IdentityDialog(
+                            IdentityEditDialog(
                                 requireContext(),
                                 identity,
                                 this@IdentitiesFragment
