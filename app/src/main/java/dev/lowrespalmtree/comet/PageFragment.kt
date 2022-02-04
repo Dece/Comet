@@ -196,29 +196,14 @@ class PageFragment : Fragment(), PageAdapter.Listener {
     }
 
     private fun askForInput(prompt: String, uri: Uri) {
-        val editText = EditText(requireContext())
-        editText.inputType = InputType.TYPE_CLASS_TEXT
-        val inputView = FrameLayout(requireContext()).apply {
-            addView(FrameLayout(requireContext()).apply {
-                addView(editText)
-                val params = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT
-                )
-                params.setMargins(resources.getDimensionPixelSize(R.dimen.text_margin))
-                layoutParams = params
-            })
-        }
-        AlertDialog.Builder(requireContext())
-            .setMessage(prompt.ifEmpty { "Input required" })
-            .setView(inputView)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                val newUri = uri.buildUpon().query(editText.text.toString()).build()
-                openUrl(newUri.toString(), base = vm.currentUrl)
-            }
-            .setOnDismissListener { updateState(PageViewModel.State.IDLE) }
-            .create()
-            .show()
+        InputDialog(requireContext(), prompt.ifEmpty { "Input required" })
+            .show(
+                onOk = { text ->
+                    val newUri = uri.buildUpon().query(text).build()
+                    openUrl(newUri.toString(), base = vm.currentUrl)
+                },
+                onDismiss = { updateState(PageViewModel.State.IDLE) }
+            )
     }
 
     private fun openUnknownScheme(uri: Uri) {
