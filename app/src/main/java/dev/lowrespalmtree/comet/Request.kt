@@ -11,6 +11,7 @@ import java.net.InetSocketAddress
 import java.net.SocketTimeoutException
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLProtocolException
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.X509TrustManager
 
@@ -46,6 +47,8 @@ class Request(private val uri: Uri) {
                         }
                     } catch (e: SocketTimeoutException) {
                         Log.i(TAG, "proceed coroutine: socket timeout.")
+                    } catch (e: SSLProtocolException) {
+                        Log.e(TAG, "proceed coroutine: SSL protocol exception: ${e.message}")
                     }
                 }
             }

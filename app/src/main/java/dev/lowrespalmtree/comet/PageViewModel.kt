@@ -120,7 +120,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
         var mainTitle: String? = null
         var lastUpdate = System.currentTimeMillis()
         var lastNumLines = 0
-        Log.d(TAG, "handleRequestSuccess: start parsing line data")
+        Log.d(TAG, "handleSuccessResponse: start parsing line data")
         try {
             val lineChannel = parseData(response.data, charset, viewModelScope)
             while (!lineChannel.isClosedForReceive) {
@@ -142,11 +142,11 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
                 }
             }
         } catch (e: CancellationException) {
-            Log.e(TAG, "handleRequestSuccess: coroutine cancelled: ${e.message}")
+            Log.e(TAG, "handleSuccessResponse: coroutine cancelled: ${e.message}")
             state.postValue(State.IDLE)
             return
         }
-        Log.d(TAG, "handleRequestSuccess: done parsing line data")
+        Log.d(TAG, "handleSuccessResponse: done parsing line data")
         lines.postValue(linesList)
 
         // We record the history entry here: it's nice because we have the main title available
@@ -174,27 +174,22 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
             Response.Code.BAD_REQUEST -> "59 Bad request"
             else -> "${response.code} (unknown)"
         }
-        val longMessage: String
-        var serverMessage: String? = null
-        if (response.code == Response.Code.SLOW_DOWN) {
-            longMessage =
-                "You should wait ${response.meta.toIntOrNull() ?: "a few"} seconds before retrying."
-        } else {
-            longMessage = when (response.code) {
-                Response.Code.TEMPORARY_FAILURE -> "The server encountered a temporary failure."
-                Response.Code.SERVER_UNAVAILABLE -> "The server is currently unavailable."
-                Response.Code.CGI_ERROR -> "A CGI script encountered an error."
-                Response.Code.PROXY_ERROR -> "The server failed to proxy the request."
-                Response.Code.PERMANENT_FAILURE -> "This request failed and similar requests will likely fail as well."
-                Response.Code.NOT_FOUND -> "This page can't be found."
-                Response.Code.GONE -> "This page is gone."
-                Response.Code.PROXY_REQUEST_REFUSED -> "The server refused to proxy the request."
-                Response.Code.BAD_REQUEST -> "Bad request."
-                else -> "Unknown error code."
-            }
-            if (response.meta.isNotEmpty())
-                serverMessage = response.meta
+        val longMessage: String = when (response.code) {
+            Response.Code.TEMPORARY_FAILURE -> "The server encountered a temporary failure."
+            Response.Code.SERVER_UNAVAILABLE -> "The server is currently unavailable."
+            Response.Code.CGI_ERROR -> "A CGI script encountered an error."
+            Response.Code.PROXY_ERROR -> "The server failed to proxy the request."
+            Response.Code.SLOW_DOWN -> "You should wait ${response.meta.toIntOrNull() ?: "a few"} seconds before retrying."
+            Response.Code.PERMANENT_FAILURE -> "This request failed and similar requests will likely fail as well."
+            Response.Code.NOT_FOUND -> "This page can't be found."
+            Response.Code.GONE -> "This page is gone."
+            Response.Code.PROXY_REQUEST_REFUSED -> "The server refused to proxy the request."
+            Response.Code.BAD_REQUEST -> "Bad request."
+            else -> "Unknown error code."
         }
+        var serverMessage: String? = null
+        if (response.code != Response.Code.SLOW_DOWN && response.meta.isNotEmpty())
+            serverMessage = response.meta
         event.postValue(FailureEvent(briefMessage, longMessage, serverMessage))
     }
 
