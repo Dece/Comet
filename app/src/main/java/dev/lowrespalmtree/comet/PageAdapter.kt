@@ -154,9 +154,18 @@ class PageAdapter(private val listener: Listener) :
                 }
             }
             is ContentBlock.Link -> {
+                val uri = Uri.parse(block.url)
                 val label = block.label.ifBlank { block.url }
                 (holder as ContentViewHolder.Link).binding.textView.text = label
                 holder.binding.root.setOnClickListener { listener.onLinkClick(block.url) }
+
+                // Add the protocol on the right view if available and necessary (i.e. not Gemini).
+                if (uri.isAbsolute && uri.scheme != null && uri.scheme != "gemini") {
+                    holder.binding.protocolView.text = uri.scheme
+                    holder.binding.protocolView.visibility = View.VISIBLE
+                } else {
+                    holder.binding.protocolView.visibility = View.GONE
+                }
 
                 // Color links differently if it has been already visited or not.
                 val resources = holder.binding.root.context.resources
