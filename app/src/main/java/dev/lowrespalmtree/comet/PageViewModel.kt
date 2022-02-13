@@ -1,11 +1,13 @@
 package dev.lowrespalmtree.comet
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.preference.PreferenceManager
 import dev.lowrespalmtree.comet.utils.joinUrls
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.onSuccess
@@ -18,18 +20,25 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
     ViewModel() {
     /** Currently viewed page URL. */
     var currentUrl: String = ""
+
     /** Latest Uri requested using `sendGeminiRequest`. */
     var loadingUrl: Uri? = null
+
     /** Observable page viewer state. */
     val state: MutableLiveData<State> by lazy { MutableLiveData<State>(State.IDLE) }
+
     /** Observable page viewer lines (backed up by `linesList` but updated less often). Left element is associated URL. */
     val lines: MutableLiveData<Pair<String, List<Line>>> by lazy { MutableLiveData<Pair<String, List<Line>>>() }
+
     /** Observable page viewer latest event. */
     val event: MutableLiveData<Event> by lazy { MutableLiveData<Event>() }
+
     /** A non-saved list of visited URLs. Not an history, just used for going back. */
     val visitedUrls = mutableListOf<String>()
+
     /** Latest request job created, stored to cancel it if needed. */
     private var requestJob: Job? = null
+
     /** Lines for the current page. */
     private var linesList = ArrayList<Line>()
 
@@ -53,14 +62,36 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
      * The URI must be valid, absolute and with a gemini scheme.
      */
     @ExperimentalCoroutinesApi
-    fun sendGeminiRequest(uri: Uri, protocol: String, connectionTimeout: Int, readTimeout: Int, redirects: Int = 0) {
-        Log.d(TAG, "sendRequest: URI \"$uri\"")
+    fun sendGeminiRequest(
+        uri: Uri,
+        context: Context,
+        redirects: Int = 0
+    ) {
+        Log.i(TAG, "sendGeminiRequest: URI \"$uri\"")
         loadingUrl = uri
+
+        // Retrieve various request parameters from user preferences.
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val protocol =
+            prefs.getString("tls_version", Request.DEFAULT_TLS_VERSION)!!
+        val connectionTimeout =
+            prefs.getInt("connection_timeout", Request.DEFAULT_CONNECTION_TIMEOUT_SEC)
+        val readTimeout =
+            prefs.getInt("read_timeout", Request.DEFAULT_READ_TIMEOUT_SEC)
+
         state.postValue(State.CONNECTING)
+
         requestJob?.apply { if (isActive) cancel() }
         requestJob = viewModelScope.launch(Dispatchers.IO) {
+            // Look for a suitable identity to use with this URL.
+            val keyManager = Identities.getForUrl(uri.toString())?.let {
+                Log.d(TAG, "sendGeminiRequest coroutine: using identity with key ${it.key}")
+                Request.KeyManager.fromAlias(it.key)
+            }
+
+            // Connect to the server and proceed (no TOFU validation yet).
             val response = try {
-                val request = Request(uri)
+                val request = Request(uri, keyManager = keyManager)
                 val socket = request.connect(protocol, connectionTimeout, readTimeout)
                 val channel = request.proceed(socket, this)
                 Response.from(channel, viewModelScope)
@@ -80,8 +111,10 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
                 )
                 return@launch
             }
+
             if (!isActive)
                 return@launch
+
             if (response == null) {
                 signalError("Can't parse server response.")
                 return@launch

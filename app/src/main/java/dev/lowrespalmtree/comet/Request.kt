@@ -8,20 +8,25 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import java.io.BufferedInputStream
 import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.SocketTimeoutException
+import java.security.KeyStore
+import java.security.Principal
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLProtocolException
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.X509TrustManager
+import javax.net.ssl.*
 
-class Request(private val uri: Uri) {
+class Request(private val uri: Uri, private val keyManager: KeyManager? = null) {
     private val port get() = if (uri.port > 0) uri.port else 1965
 
     fun connect(protocol: String, connectionTimeout: Int, readTimeout: Int): SSLSocket {
-        Log.d(TAG, "connect: $protocol, c.to. $connectionTimeout, r.to. $readTimeout")
+        Log.d(
+            TAG,
+            "connect: $protocol, conn. timeout $connectionTimeout," +
+            " read timeout $readTimeout, key manager $keyManager"
+        )
         val context = SSLContext.getInstance(protocol)
-        context.init(null, arrayOf(TrustManager()), null)
+        context.init(arrayOf(keyManager), arrayOf(TrustManager()), null)
         val socket = context.socketFactory.createSocket() as SSLSocket
         socket.soTimeout = readTimeout * 1000
         socket.connect(InetSocketAddress(uri.host, port), connectionTimeout * 1000)
@@ -58,6 +63,49 @@ class Request(private val uri: Uri) {
         return channel
     }
 
+    class KeyManager(
+        private val alias: String,
+        private val cert: X509Certificate,
+        private val privateKey: PrivateKey
+    ) : X509ExtendedKeyManager() {
+        companion object {
+            fun fromAlias(alias: String): KeyManager? {
+                val cert = Identities.keyStore.getCertificate(alias) as X509Certificate?
+                    ?: return null.also { Log.e(TAG, "fromAlias: cert is null") }
+                val key = Identities.keyStore.getEntry(alias, null)?.let { entry ->
+                    (entry as KeyStore.PrivateKeyEntry).privateKey
+                } ?: return null.also { Log.e(TAG, "fromAlias: private key is null") }
+                return KeyManager(alias, cert, key)
+            }
+        }
+
+        override fun chooseClientAlias(
+            keyType: Array<out String>?,
+            issuers: Array<out Principal>?,
+            socket: Socket?
+        ): String = alias
+
+        override fun getCertificateChain(alias: String?): Array<out X509Certificate> = arrayOf(cert)
+
+        override fun getPrivateKey(alias: String?): PrivateKey = privateKey
+
+        override fun getServerAliases(
+            keyType: String?, issuers: Array<out Principal>?
+        ): Array<String> = throw UnsupportedOperationException()
+
+        override fun chooseServerAlias(
+            keyType: String?,
+            issuers: Array<out Principal>?,
+            socket: Socket?
+        ): String = throw UnsupportedOperationException()
+
+        override fun getClientAliases(
+            keyType: String?,
+            issuers: Array<out Principal>?
+        ): Array<String> = throw UnsupportedOperationException()
+    }
+
+    /** TODO An X509TrustManager implementation for TOFU validation. */
     @SuppressLint("CustomX509TrustManager")
     class TrustManager : X509TrustManager {
         @SuppressLint("TrustAllX509TrustManager")

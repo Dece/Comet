@@ -4,12 +4,16 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.room.*
-import java.lang.IllegalArgumentException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import javax.security.auth.x500.X500Principal
 
 object Identities {
+    const val PROVIDER = "AndroidKeyStore"
+    private const val TAG = "Identities"
+
+    val keyStore by lazy { KeyStore.getInstance(PROVIDER).apply { load(null) } }
+
     @Entity
     data class Identity(
         /** ID. */
@@ -49,6 +53,10 @@ object Identities {
     suspend fun getAll(): List<Identity> =
         Database.INSTANCE.identityDao().getAll()
 
+    suspend fun getForUrl(url: String): Identity? =
+        Database.INSTANCE.identityDao().getAll()
+            .find { it.urls.any { usedUrl -> url.startsWith(usedUrl) } }
+
     suspend fun update(vararg identities: Identity) =
         Database.INSTANCE.identityDao().update(*identities)
 
@@ -62,7 +70,7 @@ object Identities {
 
     fun generateClientCert(alias: String, commonName: String) {
         val algo = KeyProperties.KEY_ALGORITHM_RSA
-        val kpg = KeyPairGenerator.getInstance(algo, "AndroidKeyStore")
+        val kpg = KeyPairGenerator.getInstance(algo, PROVIDER)
         val purposes = KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
         val spec = KeyGenParameterSpec.Builder(alias, purposes)
             .apply {
@@ -74,7 +82,9 @@ object Identities {
                     }
                 }
             }
-            .setDigests(KeyProperties.DIGEST_SHA256)
+            .setDigests(KeyProperties.DIGEST_NONE, KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
             .build()
         kpg.initialize(spec)
         kpg.generateKeyPair()
@@ -82,7 +92,6 @@ object Identities {
     }
 
     private fun deleteClientCert(alias: String) {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
         if (keyStore.containsAlias(alias)) {
             keyStore.deleteEntry(alias)
             Log.i(TAG, "deleteClientCert: deleted entry with alias \"$alias\"")
@@ -90,6 +99,4 @@ object Identities {
             Log.i(TAG, "deleteClientCert: no such alias \"$alias\"")
         }
     }
-
-    private const val TAG = "Identities"
 }

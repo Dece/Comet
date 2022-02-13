@@ -16,7 +16,6 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.FragmentPageViewBinding
 import dev.lowrespalmtree.comet.utils.isConnectedToNetwork
@@ -116,16 +115,7 @@ class PageFragment : Fragment(), PageAdapter.Listener {
         }
 
         when (uri.scheme) {
-            "gemini" -> {
-                val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-                val protocol =
-                    prefs.getString("tls_version", Request.DEFAULT_TLS_VERSION)!!
-                val connectionTimeout =
-                    prefs.getInt("connection_timeout", Request.DEFAULT_CONNECTION_TIMEOUT_SEC)
-                val readTimeout =
-                    prefs.getInt("read_timeout", Request.DEFAULT_READ_TIMEOUT_SEC)
-                vm.sendGeminiRequest(uri, protocol, connectionTimeout, readTimeout)
-            }
+            "gemini" -> vm.sendGeminiRequest(uri, requireContext())
             else -> openUnknownScheme(uri)
         }
     }
@@ -163,6 +153,7 @@ class PageFragment : Fragment(), PageAdapter.Listener {
         when (event) {
             is PageViewModel.InputEvent -> {
                 askForInput(event.prompt, event.uri)
+                updateState(PageViewModel.State.IDLE)
             }
             is PageViewModel.SuccessEvent -> {
                 vm.currentUrl = event.uri
@@ -200,7 +191,7 @@ class PageFragment : Fragment(), PageAdapter.Listener {
                     val newUri = uri.buildUpon().query(text).build()
                     openUrl(newUri.toString(), base = vm.currentUrl)
                 },
-                onDismiss = { updateState(PageViewModel.State.IDLE) }
+                onDismiss = {}
             )
     }
 
