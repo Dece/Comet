@@ -13,7 +13,7 @@ interface Line
 class EmptyLine : Line
 class ParagraphLine(val text: String) : Line
 class TitleLine(val level: Int, val text: String) : Line
-class LinkLine(val url: String, val label: String) : Line
+class LinkLine(val url: String, val label: String, var visited: Boolean = false) : Line
 class PreFenceLine(val caption: String) : Line
 class PreTextLine(val text: String) : Line
 class BlockquoteLine(val text: String) : Line
@@ -21,7 +21,7 @@ class ListItemLine(val text: String) : Line
 
 private const val TAG = "Gemtext"
 
-/** Pipe incoming gemtext data into parsed Lines. */
+/** Pipe incoming Gemtext data into parsed Lines. */
 fun parseData(
     inChannel: Channel<ByteArray>,
     charset: Charset,

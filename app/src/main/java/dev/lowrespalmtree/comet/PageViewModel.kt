@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.lowrespalmtree.comet.utils.joinUrls
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.onSuccess
 import java.net.ConnectException
@@ -21,8 +22,8 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
     var loadingUrl: Uri? = null
     /** Observable page viewer state. */
     val state: MutableLiveData<State> by lazy { MutableLiveData<State>(State.IDLE) }
-    /** Observable page viewer lines (backed up by `linesList` but updated less often). */
-    val lines: MutableLiveData<List<Line>> by lazy { MutableLiveData<List<Line>>() }
+    /** Observable page viewer lines (backed up by `linesList` but updated less often). Left element is associated URL. */
+    val lines: MutableLiveData<Pair<String, List<Line>>> by lazy { MutableLiveData<Pair<String, List<Line>>>() }
     /** Observable page viewer latest event. */
     val event: MutableLiveData<Event> by lazy { MutableLiveData<Event>() }
     /** A non-saved list of visited URLs. Not an history, just used for going back. */
@@ -113,9 +114,10 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
     @ExperimentalCoroutinesApi
     private suspend fun handleSuccessResponse(response: Response, uri: Uri) {
         state.postValue(State.RECEIVING)
+        val uriString = uri.toString()
 
         linesList.clear()
-        lines.postValue(linesList)
+        lines.postValue(Pair(uriString, linesList))
         val charset = Charset.defaultCharset()
         var mainTitle: String? = null
         var lastUpdate = System.currentTimeMillis()
@@ -126,7 +128,16 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
             while (!lineChannel.isClosedForReceive) {
                 val lineChannelResult = withTimeout(100) { lineChannel.tryReceive() }
                 lineChannelResult.onSuccess { line ->
+                    if (line is LinkLine) {
+                        // Mark visited links here as we have a access to the history.
+                        val fullUrl =
+                            if (Uri.parse(line.url).isAbsolute) line.url
+                            else joinUrls(uriString, line.url).toString()
+                        if (History.contains(fullUrl))
+                            line.visited = true
+                    }
                     linesList.add(line)
+                    // Get the first level 1 header as the page main title.
                     if (mainTitle == null && line is TitleLine && line.level == 1)
                         mainTitle = line.text
                 }
@@ -135,7 +146,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
                 if (linesList.size > lastNumLines) {
                     val time = System.currentTimeMillis()
                     if (time - lastUpdate >= 100) {
-                        lines.postValue(linesList)
+                        lines.postValue(Pair(uriString, linesList))
                         lastUpdate = time
                         lastNumLines = linesList.size
                     }
@@ -147,7 +158,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
             return
         }
         Log.d(TAG, "handleSuccessResponse: done parsing line data")
-        lines.postValue(linesList)
+        lines.postValue(Pair(uriString, linesList))
 
         // We record the history entry here: it's nice because we have the main title available
         // and we're already in a coroutine for database access.

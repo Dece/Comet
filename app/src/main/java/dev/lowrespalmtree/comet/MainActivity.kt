@@ -1,6 +1,7 @@
 package dev.lowrespalmtree.comet
 
 import android.os.Bundle
+import android.util.Log
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.bundleOf
@@ -15,6 +16,7 @@ class MainActivity : AppCompatActivity() {
     private var nhf: NavHostFragment? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.i(TAG, "onCreate")
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -31,5 +33,9 @@ class MainActivity : AppCompatActivity() {
         Preferences.getHomeUrl(this)?.let { bundle.putString("url", it) }
         nhf?.navController?.navigate(R.id.action_global_pageFragment, bundle)
         binding.drawerLayout.closeDrawers()
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }

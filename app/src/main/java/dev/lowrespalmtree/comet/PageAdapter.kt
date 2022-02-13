@@ -1,6 +1,7 @@
 package dev.lowrespalmtree.comet
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -33,7 +34,7 @@ class PageAdapter(private val listener: Listener) :
         object Empty : ContentBlock()
         class Paragraph(val text: String) : ContentBlock()
         class Title(val text: String, val level: Int) : ContentBlock()
-        class Link(val url: String, val label: String) : ContentBlock()
+        class Link(val url: String, val label: String, val visited: Boolean) : ContentBlock()
         class Pre(val caption: String, var content: String, var closed: Boolean) : ContentBlock()
         class Blockquote(var text: String) : ContentBlock()
         class ListItem(val text: String) : ContentBlock()
@@ -54,7 +55,7 @@ class PageAdapter(private val listener: Listener) :
                 when (val line = lines[currentLine]) {
                     is EmptyLine -> blocks.add(ContentBlock.Empty)
                     is ParagraphLine -> blocks.add(ContentBlock.Paragraph(line.text))
-                    is LinkLine -> blocks.add(ContentBlock.Link(line.url, line.label))
+                    is LinkLine -> blocks.add(ContentBlock.Link(line.url, line.label, line.visited))
                     is ListItemLine -> blocks.add(ContentBlock.ListItem(line.text))
                     is TitleLine -> blocks.add(ContentBlock.Title(line.text, line.level))
                     is PreFenceLine -> {
@@ -95,8 +96,8 @@ class PageAdapter(private val listener: Listener) :
         lastBlockCount = blocks.size
     }
 
-    sealed class ContentViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        class Empty(binding: GemtextEmptyBinding) : ContentViewHolder(binding.root)
+    sealed class ContentViewHolder(val view: View) : RecyclerView.ViewHolder(view) {
+        class Empty(val binding: GemtextEmptyBinding) : ContentViewHolder(binding.root)
         class Paragraph(val binding: GemtextParagraphBinding) : ContentViewHolder(binding.root)
         class Title1(val binding: GemtextTitle1Binding) : ContentViewHolder(binding.root)
         class Title2(val binding: GemtextTitle2Binding) : ContentViewHolder(binding.root)
@@ -156,6 +157,15 @@ class PageAdapter(private val listener: Listener) :
                 val label = block.label.ifBlank { block.url }
                 (holder as ContentViewHolder.Link).binding.textView.text = label
                 holder.binding.root.setOnClickListener { listener.onLinkClick(block.url) }
+
+                // Color links differently if it has been already visited or not.
+                val resources = holder.binding.root.context.resources
+                holder.binding.textView.setTextColor(
+                    if (block.visited)
+                        resources.getColor(R.color.link_visited, null)
+                    else
+                        resources.getColor(R.color.link, null)
+                )
             }
             is ContentBlock.Pre ->
                 (holder as ContentViewHolder.Pre).binding.textView.text = block.content

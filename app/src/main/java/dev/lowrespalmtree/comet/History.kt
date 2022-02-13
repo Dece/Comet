@@ -38,6 +38,10 @@ object History {
             dao.update(entry.also { it.title = title; it.lastVisit = now })
     }
 
+    suspend fun contains(uri: String): Boolean = get(uri) != null
+
+    suspend fun get(uri: String): HistoryEntry? = Database.INSTANCE.historyEntryDao().get(uri)
+
     suspend fun getAll(): List<HistoryEntry> = Database.INSTANCE.historyEntryDao().getAll()
 
     suspend fun getLast(): HistoryEntry? = Database.INSTANCE.historyEntryDao().getLast()

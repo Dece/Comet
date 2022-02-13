@@ -51,7 +51,7 @@ class PageFragment : Fragment(), PageAdapter.Listener {
         binding.contentSwipeLayout.setOnRefreshListener { openUrl(vm.currentUrl) }
 
         vm.state.observe(viewLifecycleOwner) { updateState(it) }
-        vm.lines.observe(viewLifecycleOwner) { updateLines(it) }
+        vm.lines.observe(viewLifecycleOwner) { updateLines(it.second, it.first) }
         vm.event.observe(viewLifecycleOwner) { handleEvent(it) }
 
         activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner) { onBackPressed() }
@@ -151,8 +151,8 @@ class PageFragment : Fragment(), PageAdapter.Listener {
         }
     }
 
-    private fun updateLines(lines: List<Line>) {
-        Log.d(TAG, "updateLines: ${lines.size} lines")
+    private fun updateLines(lines: List<Line>, url: String) {
+        Log.d(TAG, "updateLines: ${lines.size} lines from $url")
         adapter.setLines(lines)
     }
 
