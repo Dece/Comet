@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         style="@style/CometText"
+        android:textColor="@color/text_light"
         android:background="@color/background_emph"
         android:textStyle="italic" />
 </FrameLayout>

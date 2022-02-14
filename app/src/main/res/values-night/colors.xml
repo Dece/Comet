@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="background">#002b36</color>
-    <color name="background_emph">#073642</color>
-    <color name="text_light">#93a1a1</color>
-    <color name="text">#839496</color>
-    <color name="main_accent">#d33682</color>
-    <color name="main_accent_dark">#073642</color>
-    <color name="second_accent">#2aa198</color>
-    <color name="second_accent_dark">#073642</color>
-    <color name="url_bar">#fdf6e3</color>
-    <color name="url_bar_loading">#586e75</color>
+    <color name="background">@color/base03</color>
+    <color name="background_emph">@color/base02</color>
+    <color name="text_light">@color/base1</color>
+    <color name="text">@color/base0</color>
+    <color name="main_accent">@color/magenta</color>
+    <color name="main_accent_dark">@color/base02</color>
+    <color name="second_accent">@color/cyan</color>
+    <color name="second_accent_dark">@color/base02</color>
+    <color name="url_bar">@color/base3</color>
+    <color name="url_bar_loading">@color/base01</color>
 </resources>

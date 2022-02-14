@@ -9,7 +9,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="14sp"
-        android:textColor="@color/text"
+        android:textColor="@color/text_light"
         android:fontFamily="@font/preformatted"
         android:typeface="monospace"
         android:padding="4dp"
