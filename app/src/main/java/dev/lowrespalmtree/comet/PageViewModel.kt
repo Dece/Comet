@@ -195,8 +195,8 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
 
         // We record the history entry here: it's nice because we have the main title available
         // and we're already in a coroutine for database access.
-        History.record(uri.toString(), mainTitle)
-        event.postValue(SuccessEvent(uri.toString()))
+        History.record(uriString, mainTitle)
+        event.postValue(SuccessEvent(uriString))
         state.postValue(State.IDLE)
     }
 

@@ -19,6 +19,12 @@ import javax.net.ssl.*
 class Request(private val uri: Uri, private val keyManager: KeyManager? = null) {
     private val port get() = if (uri.port > 0) uri.port else 1965
 
+    /**
+     * Open and return the TLS socket with the server.
+     *
+     * If the server certificate present is fine according to our TOFU settings, the app can
+     * continue by calling `proceed` which will retrieve the data.
+     */
     fun connect(protocol: String, connectionTimeout: Int, readTimeout: Int): SSLSocket {
         Log.d(
             TAG,
@@ -34,6 +40,7 @@ class Request(private val uri: Uri, private val keyManager: KeyManager? = null) 
         return socket
     }
 
+    /** Return a byte array channel carrying the data chunks sent by the server. */
     fun proceed(socket: SSLSocket, scope: CoroutineScope): Channel<ByteArray> {
         Log.d(TAG, "proceed")
         socket.outputStream.write("$uri\r\n".toByteArray())
@@ -63,6 +70,13 @@ class Request(private val uri: Uri, private val keyManager: KeyManager? = null) 
         return channel
     }
 
+    /**
+     * Dummy KeyManager to be used when an client cert is to be used during the connection.
+     *
+     * This simply retrieves both the public cert and private key from the Android key store
+     * and implement dummy methods to return only this key pair. Some methods are left unimplemented
+     * because they should never be executed in the context we use the key manager in.
+     */
     class KeyManager(
         private val alias: String,
         private val cert: X509Certificate,

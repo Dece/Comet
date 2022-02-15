@@ -13,15 +13,18 @@ class UriUtilsTest {
     fun joinUrls() {
         assertEquals(
             "gemini://dece.space/some-file.gmi",
-            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/", "some-file.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/", "some-file.gmi")
+                .toString()
         )
         assertEquals(
             "gemini://dece.space/some-file.gmi",
-            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/", "./some-file.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/", "./some-file.gmi")
+                .toString()
         )
         assertEquals(
             "gemini://dece.space/some-file.gmi",
-            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/dir1", "/some-file.gmi").toString()
+            dev.lowrespalmtree.comet.utils.joinUrls("gemini://dece.space/dir1", "/some-file.gmi")
+                .toString()
         )
         assertEquals(
             "gemini://dece.space/dir1/other-file.gmi",
