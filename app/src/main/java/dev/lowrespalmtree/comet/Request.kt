@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import java.io.BufferedInputStream
@@ -46,13 +47,12 @@ class Request(private val uri: Uri, private val keyManager: KeyManager? = null) 
         socket.outputStream.write("$uri\r\n".toByteArray())
 
         val channel = Channel<ByteArray>()
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             val buffer = ByteArray(1024)
             var numRead: Int
             socket.inputStream.use { socket_input_stream ->
                 BufferedInputStream(socket_input_stream).use { bis ->
                     try {
-                        @Suppress("BlockingMethodInNonBlockingContext")  // what u gonna do
                         while ((bis.read(buffer).also { numRead = it }) >= 0) {
                             val received = buffer.sliceArray(0 until numRead)
                             channel.send(received)
