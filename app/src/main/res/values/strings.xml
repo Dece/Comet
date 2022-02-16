@@ -47,5 +47,8 @@
     <string name="identity_usages">Active URL path</string>
     <string name="input_common_name">Enter a name to use as the certificate\'s subject common name. This can be left empty.</string>
     <string name="tls_version">TLS version</string>
+    <string name="open">Open</string>
+    <string name="download_completed">File downloaded.</string>
+    <string name="image_download_completed">Image downloaded.</string>
 
 </resources>

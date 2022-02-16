@@ -17,11 +17,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import dev.lowrespalmtree.comet.databinding.FragmentPageViewBinding
 import dev.lowrespalmtree.comet.utils.isConnectedToNetwork
-import dev.lowrespalmtree.comet.utils.joinUrls
 import dev.lowrespalmtree.comet.utils.resolveLinkUri
-import dev.lowrespalmtree.comet.utils.toGeminiUri
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -147,13 +146,43 @@ class PageFragment : Fragment(), PageAdapter.Listener {
             return
         when (event) {
             is PageViewModel.InputEvent -> {
-                askForInput(event.prompt, event.uri)
-                updateState(PageViewModel.State.IDLE)
+                InputDialog(requireContext(), event.prompt.ifEmpty { "Input required" })
+                    .show(
+                        onOk = { text ->
+                            val newUri = event.uri.buildUpon().query(text).build()
+                            openUrl(newUri.toString(), base = vm.currentUrl)
+                        },
+                        onDismiss = {}
+                    )
             }
             is PageViewModel.SuccessEvent -> {
                 vm.currentUrl = event.uri
                 vm.visitedUrls.add(event.uri)
                 binding.addressBar.setText(event.uri)
+            }
+            is PageViewModel.BinaryEvent -> {
+                // TODO this should present the user with options on what to do according to the
+                // MIME type: show inline, save in the media store, save as generic download, etc.
+                vm.downloadResponse(
+                    event.response.data,
+                    event.uri,
+                    event.mimeType,
+                    requireContext().contentResolver
+                )
+            }
+            is PageViewModel.DownloadCompletedEvent -> {
+                val message = when (event.mimeType.main) {
+                    "image" -> R.string.image_download_completed
+                    else -> R.string.download_completed
+                }
+                Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT)
+                    .setAction(R.string.open) {
+                        startActivity(Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(event.uri, event.mimeType.short)
+                        })
+                    }
+                    .show()
+                vm.visitedUrls.add(event.uri.toString())
             }
             is PageViewModel.RedirectEvent -> {
                 openUrl(event.uri, base = vm.currentUrl, redirections = event.redirects)
@@ -165,7 +194,6 @@ class PageFragment : Fragment(), PageAdapter.Listener {
                 if (!isConnectedToNetwork(requireContext()))
                     message += "\n\nInternet may be inaccessible…"
                 alert(message, title = event.short)
-                updateState(PageViewModel.State.IDLE)
             }
         }
         event.handled = true
@@ -177,17 +205,6 @@ class PageFragment : Fragment(), PageAdapter.Listener {
             .setMessage(message)
             .create()
             .show()
-    }
-
-    private fun askForInput(prompt: String, uri: Uri) {
-        InputDialog(requireContext(), prompt.ifEmpty { "Input required" })
-            .show(
-                onOk = { text ->
-                    val newUri = uri.buildUpon().query(text).build()
-                    openUrl(newUri.toString(), base = vm.currentUrl)
-                },
-                onDismiss = {}
-            )
     }
 
     private fun openUnknownScheme(uri: Uri) {

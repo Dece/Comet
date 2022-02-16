@@ -1,23 +1,35 @@
 package dev.lowrespalmtree.comet
 
+import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Environment
 import android.util.Log
+import androidx.core.net.toFile
+import androidx.core.net.toUri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import dev.lowrespalmtree.comet.utils.isPostQ
 import dev.lowrespalmtree.comet.utils.resolveLinkUri
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onSuccess
+import java.io.File
+import java.io.FileOutputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.charset.Charset
+import java.util.*
+import android.provider.MediaStore.Images.Media as ImagesMedia
 
-class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedStateHandle) :
-    ViewModel() {
+class PageViewModel(
+    @Suppress("unused") private val savedStateHandle: SavedStateHandle
+) : ViewModel() {
     /** Currently viewed page URL. */
     var currentUrl: String = ""
 
@@ -42,14 +54,37 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
     /** Lines for the current page. */
     private var linesList = ArrayList<Line>()
 
+    /** Page state to be reflected on the UI (e.g. loading bar). */
     enum class State {
         IDLE, CONNECTING, RECEIVING
     }
 
+    /** Generic event class to notify observers with. The handled flag avoids repeated usage. */
     abstract class Event(var handled: Boolean = false)
+
+    /** An user input has been requested from the URI, with this prompt. */
     data class InputEvent(val uri: Uri, val prompt: String) : Event()
+
+    /** The server responded with a success code and *has finished* its response. */
     data class SuccessEvent(val uri: String) : Event()
+
+    /** The server responded with a success code and a binary MIME type (not delivered yet). */
+    data class BinaryEvent(
+        val uri: Uri,
+        val response: Response,
+        val mimeType: MimeType
+    ) : Event()
+
+    /** A file has been completely downloaded. */
+    data class DownloadCompletedEvent(
+        val uri: Uri,
+        val mimeType: MimeType
+    ) : Event()
+
+    /** The server is redirecting us. */
     data class RedirectEvent(val uri: String, val redirects: Int) : Event()
+
+    /** The server responded with a failure code or we encountered a local issue. */
     data class FailureEvent(
         val short: String,
         val details: String,
@@ -59,7 +94,9 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
     /**
      * Perform a request against this URI.
      *
-     * The URI must be valid, absolute and with a gemini scheme.
+     * @param uri URI to open; must be valid, absolute and with a gemini scheme
+     * @param context Context used to retrieve user preferences, not stored
+     * @param redirects current number of redirections operated
      */
     @ExperimentalCoroutinesApi
     fun sendGeminiRequest(
@@ -136,14 +173,19 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
         }
     }
 
+    /** Notify observers that an error happened. Set state to idle. */
     private fun signalError(message: String) {
         event.postValue(FailureEvent("Error", message))
+        state.postValue(State.IDLE)
     }
 
+    /** Notify observers that user input has been requested. */
     private fun handleInputResponse(response: Response, uri: Uri) {
         event.postValue(InputEvent(uri, response.meta))
+        state.postValue(State.IDLE)
     }
 
+    /** Continue processing a successful response by looking at the provided MIME type. */
     @ExperimentalCoroutinesApi
     private suspend fun handleSuccessResponse(response: Response, uri: Uri) {
         val mimeType = MimeType.from(response.meta) ?: MimeType.DEFAULT  // Spec. section 3.3 last §
@@ -154,10 +196,11 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
                 else
                     handleSuccessGenericTextResponse(response, uri)
             }
-            else -> signalError("No idea how to process a \"${mimeType.short}\" file.")
+            else -> event.postValue(BinaryEvent(uri, response, mimeType))
         }
     }
 
+    /** Receive Gemtext data, parse it and send the lines to observers. */
     @ExperimentalCoroutinesApi
     private suspend fun handleSuccessGemtextResponse(response: Response, uri: Uri) {
         state.postValue(State.RECEIVING)
@@ -212,14 +255,21 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
         state.postValue(State.IDLE)
     }
 
+    /** Receive generic text data (e.g. text/plain) and send it to observers. */
     @ExperimentalCoroutinesApi
     private suspend fun handleSuccessGenericTextResponse(response: Response, uri: Uri) =
         handleSuccessGemtextResponse(response, uri)  // TODO render plain text as... something else?
 
+    /** Notify observers that a redirect has been returned. */
     private fun handleRedirectResponse(response: Response, redirects: Int) {
         event.postValue(RedirectEvent(response.meta, redirects))
     }
 
+    /**
+     * Provide an error message to the user corresponding to the error code.
+     *
+     * TODO This requires a lot of localisation.
+     */
     private fun handleErrorResponse(response: Response) {
         val briefMessage = when (response.code) {
             Response.Code.TEMPORARY_FAILURE -> "40 Temporary failure"
@@ -251,6 +301,69 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
         if (response.code != Response.Code.SLOW_DOWN && response.meta.isNotEmpty())
             serverMessage = response.meta
         event.postValue(FailureEvent(briefMessage, longMessage, serverMessage))
+        state.postValue(State.IDLE)
+    }
+
+    /**
+     * Download response content as a file.
+     */
+    @ExperimentalCoroutinesApi
+    fun downloadResponse(
+        channel: Channel<ByteArray>,
+        uri: Uri,
+        mimeType: MimeType,
+        contentResolver: ContentResolver
+    ) {
+        when (mimeType.main) {
+            "image" -> downloadImage(channel, uri, mimeType, contentResolver)
+            else -> throw UnsupportedOperationException()  // TODO use SAF
+        }
+    }
+
+    /** Download image data in the media store. Run entirely in an IO coroutine. */
+    private fun downloadImage(
+        channel: Channel<ByteArray>,
+        uri: Uri,
+        mimeType: MimeType,
+        contentResolver: ContentResolver
+    ) {
+        val filename = uri.lastPathSegment.orEmpty().ifBlank { UUID.randomUUID().toString() }
+        viewModelScope.launch(Dispatchers.IO) {
+            // On Android Q and after, we use the proper MediaStore APIs.
+            val mediaUri = if (isPostQ()) {
+                val details = ContentValues().apply {
+                    put(ImagesMedia.IS_PENDING, 1)
+                    put(ImagesMedia.DISPLAY_NAME, filename)
+                    put(ImagesMedia.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/Comet")
+                }
+                val mediaUri = contentResolver.insert(ImagesMedia.EXTERNAL_CONTENT_URI, details)
+                    ?: return@launch Unit.also {
+                        signalError("Download failed: can't create local media file.")
+                    }
+                contentResolver.openOutputStream(mediaUri)?.use { os ->
+                    for (chunk in channel)
+                        os.write(chunk)
+                } ?: return@launch Unit.also {
+                    signalError("Download failed: can't open output stream.")
+                }
+                details.clear()
+                details.put(ImagesMedia.IS_PENDING, 0)
+                contentResolver.update(mediaUri, details, null, null)
+                mediaUri
+            }
+            // Before that, use the traditional clunky APIs. TODO test this stuff
+            else {
+                val collUri = ImagesMedia.EXTERNAL_CONTENT_URI
+                val outputFile = File(File(collUri.toFile(), "Comet"), filename)
+                FileOutputStream(outputFile).use { fos ->
+                    for (chunk in channel)
+                        fos.buffered().write(chunk)
+                }
+                outputFile.toUri()
+            }
+            event.postValue(DownloadCompletedEvent(mediaUri, mimeType))
+            state.postValue(State.IDLE)
+        }
     }
 
     companion object {
