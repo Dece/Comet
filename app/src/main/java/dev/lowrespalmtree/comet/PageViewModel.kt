@@ -8,7 +8,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
-import dev.lowrespalmtree.comet.utils.joinUrls
 import dev.lowrespalmtree.comet.utils.resolveLinkUri
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.onSuccess
@@ -147,6 +146,20 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
 
     @ExperimentalCoroutinesApi
     private suspend fun handleSuccessResponse(response: Response, uri: Uri) {
+        val mimeType = MimeType.from(response.meta) ?: MimeType.DEFAULT  // Spec. section 3.3 last §
+        when (mimeType.main) {
+            "text" -> {
+                if (mimeType.sub == "gemini")
+                    handleSuccessGemtextResponse(response, uri)
+                else
+                    handleSuccessGenericTextResponse(response, uri)
+            }
+            else -> signalError("No idea how to process a \"${mimeType.short}\" file.")
+        }
+    }
+
+    @ExperimentalCoroutinesApi
+    private suspend fun handleSuccessGemtextResponse(response: Response, uri: Uri) {
         state.postValue(State.RECEIVING)
         val uriString = uri.toString()
 
@@ -198,6 +211,10 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
         event.postValue(SuccessEvent(uriString))
         state.postValue(State.IDLE)
     }
+
+    @ExperimentalCoroutinesApi
+    private suspend fun handleSuccessGenericTextResponse(response: Response, uri: Uri) =
+        handleSuccessGemtextResponse(response, uri)  // TODO render plain text as... something else?
 
     private fun handleRedirectResponse(response: Response, redirects: Int) {
         event.postValue(RedirectEvent(response.meta, redirects))

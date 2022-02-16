@@ -18,7 +18,7 @@ class MimeType(
             if (";" in string) {
                 val elements = string.split(";")
                 typeString = elements[0]
-                params = mutableMapOf<String, String>()
+                params = mutableMapOf()
                 elements.subList(1, elements.size)
                     .map { it.trim().lowercase() }
                     .map { p -> if (p.count { it == '=' } != 1) return@from null else p }
