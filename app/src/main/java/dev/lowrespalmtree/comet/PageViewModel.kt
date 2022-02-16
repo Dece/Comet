@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import dev.lowrespalmtree.comet.utils.joinUrls
+import dev.lowrespalmtree.comet.utils.resolveLinkUri
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.onSuccess
 import java.net.ConnectException
@@ -163,9 +164,7 @@ class PageViewModel(@Suppress("unused") private val savedStateHandle: SavedState
                 lineChannelResult.onSuccess { line ->
                     if (line is LinkLine) {
                         // Mark visited links here as we have a access to the history.
-                        val fullUrl =
-                            if (Uri.parse(line.url).isAbsolute) line.url
-                            else joinUrls(uriString, line.url).toString()
+                        val fullUrl = resolveLinkUri(line.url, uriString).toString()
                         if (History.contains(fullUrl))
                             line.visited = true
                     }

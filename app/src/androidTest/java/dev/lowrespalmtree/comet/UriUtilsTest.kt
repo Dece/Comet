@@ -1,14 +1,46 @@
 package dev.lowrespalmtree.comet
 
+import dev.lowrespalmtree.comet.utils.*
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * Example local unit test, which will execute on the development machine (host).
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
+/** Test utils.Uri functions. Runs of the device due to the Uri functions being Android-only .*/
 class UriUtilsTest {
+    @Test
+    fun resolveLinkUri() {
+        // Absolute URLs.
+        assertEquals(
+            "gemini://example.com/",
+            resolveLinkUri("gemini://example.com", "gemini://dece.space/").toString()
+        )
+        // Relative links.
+        assertEquals(
+            "gemini://example.com/",
+            resolveLinkUri(".", "gemini://example.com/").toString()
+        )
+        assertEquals(
+            "gemini://example.com/",
+            resolveLinkUri("..", "gemini://example.com/").toString()
+        )
+        assertEquals(
+            "gemini://example.com/page",
+            resolveLinkUri("./page", "gemini://example.com/").toString()
+        )
+        assertEquals(
+            "gemini://example.com/page",
+            resolveLinkUri("page", "gemini://example.com/").toString()
+        )
+        assertEquals(
+            "gemini://example.com/page.com",
+            resolveLinkUri("page.com", "gemini://example.com/").toString()
+        )
+        // Scheme-less URLs.
+        assertEquals(
+            "gemini://someone.smol.pub/somepage",
+            resolveLinkUri("//someone.smol.pub/somepage", "gemini://smol.pub/feed").toString()
+        )
+    }
+
     @Test
     fun joinUrls() {
         assertEquals(

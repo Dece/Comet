@@ -3,6 +3,26 @@ package dev.lowrespalmtree.comet.utils
 import android.net.Uri
 
 /**
+ * Resolve the URI of a link found on a page.
+ *
+ * Links can take various forms: absolute links to a page on a capsule, relative links on the same
+ * capsule, but also fancy scheme-less absolute URLs (i.e. starting with "//") for cross-protocol
+ * linking. This function returns the resolved URI from any type of link, opt. using current URL.
+ */
+fun resolveLinkUri(url: String, base: String?): Uri {
+    var uri = Uri.parse(url)
+    if (!uri.isAbsolute) {
+        uri =
+            if (url.startsWith("//")) uri.buildUpon().scheme("gemini").build()
+            else if (!base.isNullOrEmpty()) joinUrls(base, url)
+            else toGeminiUri(uri)
+    } else if (uri.scheme == "gemini" && uri.path.isNullOrEmpty()) {
+        uri = uri.buildUpon().path("/").build()
+    }
+    return uri
+}
+
+/**
  * Transform a relative URI to an absolute Gemini URI
  *
  * This is mostly to translate user-friendly URLs such as "medusae.space" into

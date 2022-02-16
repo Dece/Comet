@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import dev.lowrespalmtree.comet.databinding.FragmentPageViewBinding
 import dev.lowrespalmtree.comet.utils.isConnectedToNetwork
 import dev.lowrespalmtree.comet.utils.joinUrls
+import dev.lowrespalmtree.comet.utils.resolveLinkUri
 import dev.lowrespalmtree.comet.utils.toGeminiUri
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -107,13 +108,7 @@ class PageFragment : Fragment(), PageAdapter.Listener {
             return
         }
 
-        var uri = Uri.parse(url)
-        if (!uri.isAbsolute) {
-            uri = if (!base.isNullOrEmpty()) joinUrls(base, url) else toGeminiUri(uri)
-        } else if (uri.scheme == "gemini" && uri.path.isNullOrEmpty()) {
-            uri = uri.buildUpon().path("/").build()
-        }
-
+        val uri = resolveLinkUri(url, base)
         when (uri.scheme) {
             "gemini" -> vm.sendGeminiRequest(uri, requireContext())
             else -> openUnknownScheme(uri)
