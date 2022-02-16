@@ -1,31 +1,23 @@
 package dev.lowrespalmtree.comet
 
 import android.content.ContentResolver
-import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import android.util.Log
-import androidx.core.net.toFile
-import androidx.core.net.toUri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
-import dev.lowrespalmtree.comet.utils.isPostQ
+import dev.lowrespalmtree.comet.utils.downloadMedia
 import dev.lowrespalmtree.comet.utils.resolveLinkUri
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onSuccess
-import java.io.File
-import java.io.FileOutputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.charset.Charset
-import java.util.*
-import android.provider.MediaStore.Images.Media as ImagesMedia
 
 class PageViewModel(
     @Suppress("unused") private val savedStateHandle: SavedStateHandle
@@ -173,7 +165,7 @@ class PageViewModel(
         }
     }
 
-    /** Notify observers that an error happened. Set state to idle. */
+    /** Notify observers that an error happened, with a generic short message. Set state to idle. */
     private fun signalError(message: String) {
         event.postValue(FailureEvent("Error", message))
         state.postValue(State.IDLE)
@@ -304,9 +296,7 @@ class PageViewModel(
         state.postValue(State.IDLE)
     }
 
-    /**
-     * Download response content as a file.
-     */
+    /** Download response content as a file. */
     @ExperimentalCoroutinesApi
     fun downloadResponse(
         channel: Channel<ByteArray>,
@@ -315,54 +305,20 @@ class PageViewModel(
         contentResolver: ContentResolver
     ) {
         when (mimeType.main) {
-            "image" -> downloadImage(channel, uri, mimeType, contentResolver)
-            else -> throw UnsupportedOperationException()  // TODO use SAF
-        }
-    }
-
-    /** Download image data in the media store. Run entirely in an IO coroutine. */
-    private fun downloadImage(
-        channel: Channel<ByteArray>,
-        uri: Uri,
-        mimeType: MimeType,
-        contentResolver: ContentResolver
-    ) {
-        val filename = uri.lastPathSegment.orEmpty().ifBlank { UUID.randomUUID().toString() }
-        viewModelScope.launch(Dispatchers.IO) {
-            // On Android Q and after, we use the proper MediaStore APIs.
-            val mediaUri = if (isPostQ()) {
-                val details = ContentValues().apply {
-                    put(ImagesMedia.IS_PENDING, 1)
-                    put(ImagesMedia.DISPLAY_NAME, filename)
-                    put(ImagesMedia.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/Comet")
-                }
-                val mediaUri = contentResolver.insert(ImagesMedia.EXTERNAL_CONTENT_URI, details)
-                    ?: return@launch Unit.also {
-                        signalError("Download failed: can't create local media file.")
-                    }
-                contentResolver.openOutputStream(mediaUri)?.use { os ->
-                    for (chunk in channel)
-                        os.write(chunk)
-                } ?: return@launch Unit.also {
-                    signalError("Download failed: can't open output stream.")
-                }
-                details.clear()
-                details.put(ImagesMedia.IS_PENDING, 0)
-                contentResolver.update(mediaUri, details, null, null)
-                mediaUri
+            "image", "audio", "video" -> {
+                downloadMedia(
+                    channel, uri, mimeType, viewModelScope, contentResolver,
+                    onSuccess = { mediaUri ->
+                        event.postValue(DownloadCompletedEvent(mediaUri, mimeType))
+                        state.postValue(State.IDLE)
+                    },
+                    onError = { msg -> signalError("Download failed: $msg") }
+                )
             }
-            // Before that, use the traditional clunky APIs. TODO test this stuff
-            else {
-                val collUri = ImagesMedia.EXTERNAL_CONTENT_URI
-                val outputFile = File(File(collUri.toFile(), "Comet"), filename)
-                FileOutputStream(outputFile).use { fos ->
-                    for (chunk in channel)
-                        fos.buffered().write(chunk)
-                }
-                outputFile.toUri()
+            else -> {
+                // TODO use SAF
+                signalError("MIME type unsupported yet: ${mimeType.main} (\"${mimeType.short}\")")
             }
-            event.postValue(DownloadCompletedEvent(mediaUri, mimeType))
-            state.postValue(State.IDLE)
         }
     }
 
