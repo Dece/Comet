@@ -28,7 +28,7 @@ object History {
         suspend fun update(vararg entries: HistoryEntry)
     }
 
-    suspend fun record(uri: String, title: String?) {
+    suspend fun record(uri: String, title: String? = null) {
         val now = System.currentTimeMillis()
         val dao = Database.INSTANCE.historyEntryDao()
         val entry = dao.get(uri)

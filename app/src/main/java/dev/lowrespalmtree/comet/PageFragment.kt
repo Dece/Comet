@@ -182,7 +182,6 @@ class PageFragment : Fragment(), PageAdapter.Listener {
                         })
                     }
                     .show()
-                vm.visitedUrls.add(event.uri.toString())
             }
             is PageViewModel.RedirectEvent -> {
                 openUrl(

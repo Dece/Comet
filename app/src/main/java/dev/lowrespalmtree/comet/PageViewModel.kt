@@ -311,6 +311,7 @@ class PageViewModel(
                     onSuccess = { mediaUri ->
                         event.postValue(DownloadCompletedEvent(mediaUri, mimeType))
                         state.postValue(State.IDLE)
+                        viewModelScope.launch(Dispatchers.IO) { History.record(uri.toString()) }
                     },
                     onError = { msg -> signalError("Download failed: $msg") }
                 )
