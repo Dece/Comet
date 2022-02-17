@@ -63,7 +63,7 @@ class PageFragment : Fragment(), PageAdapter.Listener {
             Log.d(TAG, "onViewCreated: reuse current URL, probably fragment recreation")
         } else if (vm.visitedUrls.isEmpty()) {
             Log.d(TAG, "onViewCreated: no current URL, open home if configured")
-            Preferences.getHomeUrl(requireContext())?.let { openUrl(it) }
+            Preferences.getHomeUrl(requireContext())?.let { if (it.isNotBlank()) openUrl(it) }
         }
     }
 
