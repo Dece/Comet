@@ -74,7 +74,7 @@ class PageViewModel(
     ) : Event()
 
     /** The server is redirecting us. */
-    data class RedirectEvent(val uri: String, val redirects: Int) : Event()
+    data class RedirectEvent(val uri: String, val sourceUri: String, val redirects: Int) : Event()
 
     /** The server responded with a failure code or we encountered a local issue. */
     data class FailureEvent(
@@ -156,7 +156,7 @@ class PageViewModel(
                 Response.Code.Category.SUCCESS ->
                     handleSuccessResponse(response, uri)
                 Response.Code.Category.REDIRECT ->
-                    handleRedirectResponse(response, redirects = redirects + 1)
+                    handleRedirectResponse(response, uri, redirects = redirects + 1)
                 Response.Code.Category.SERVER_ERROR, Response.Code.Category.CLIENT_ERROR ->
                     handleErrorResponse(response)
                 else ->
@@ -253,8 +253,8 @@ class PageViewModel(
         handleSuccessGemtextResponse(response, uri)  // TODO render plain text as... something else?
 
     /** Notify observers that a redirect has been returned. */
-    private fun handleRedirectResponse(response: Response, redirects: Int) {
-        event.postValue(RedirectEvent(response.meta, redirects))
+    private fun handleRedirectResponse(response: Response, uri: Uri, redirects: Int) {
+        event.postValue(RedirectEvent(response.meta, uri.toString(), redirects))
     }
 
     /**

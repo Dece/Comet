@@ -185,7 +185,11 @@ class PageFragment : Fragment(), PageAdapter.Listener {
                 vm.visitedUrls.add(event.uri.toString())
             }
             is PageViewModel.RedirectEvent -> {
-                openUrl(event.uri, base = vm.currentUrl, redirections = event.redirects)
+                openUrl(
+                    event.uri,
+                    base = vm.currentUrl.ifEmpty { event.sourceUri },
+                    redirections = event.redirects
+                )
             }
             is PageViewModel.FailureEvent -> {
                 var message = event.details
