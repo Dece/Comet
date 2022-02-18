@@ -157,7 +157,8 @@ class PageFragment : Fragment(), PageAdapter.Listener {
             }
             is PageViewModel.SuccessEvent -> {
                 vm.currentUrl = event.uri
-                vm.visitedUrls.add(event.uri)
+                if (vm.visitedUrls.isEmpty() || vm.visitedUrls.last() != event.uri)
+                    vm.visitedUrls.add(event.uri)
                 binding.addressBar.setText(event.uri)
             }
             is PageViewModel.BinaryEvent -> {
